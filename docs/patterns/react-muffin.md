@@ -1,6 +1,6 @@
 # React + Muffin
 
-Muffin doesn't constrain a single pattern. In React projects (e.g. jity-dam), muffin is used as the **WebSocket and service transport layer** while React owns the UI. This is one valid pattern — not a workaround.
+Muffin doesn't constrain a single pattern. In React projects, muffin can be used purely as the **WebSocket and service transport layer** while React owns the UI. This is one valid pattern — not a workaround.
 
 ## How it works
 
@@ -55,7 +55,7 @@ class AssetService extends Muffin.Service {
     static name = 'AssetService'
 
     static Interfaces = {
-        Dam: '@jity/dam:::AssetManagementService'
+        Dam: '@myhost/app:::AssetManagementService'
     }
 
     static async getAssets(filters: AssetFilters): Promise<Asset[]> {

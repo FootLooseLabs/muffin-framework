@@ -131,7 +131,7 @@ declare global {
 
 | Use muffin-only | Use React + muffin transport |
 |---|---|
-| App is primarily a WebSocket-driven tool (agent builder, content editor) | Tool is UI-heavy with complex state, forms, conditional flows |
+| App is primarily a WebSocket-driven tool or UI is niche or custom | Tool is standard UI and state management, forms, conditional flows |
 | Deep use of state machine, PostOffice, surface/tab patterns | Team has React expertise, component trees are large |
 | CDN-first deployment, no build complexity | TypeScript throughout is a hard requirement |
 

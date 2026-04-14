@@ -4,3 +4,5 @@ dist/
 docs/.vitepress/dist
 docs/.vitepress/cache
 docs/chat-logs/
+element-pacakge-manager/
+issues/

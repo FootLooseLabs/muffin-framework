@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Muffin Test Rig</title>
+  <script>
+    const MUFFIN_CONFIG = {
+      LOGGING_LEVEL: "IMP",
+      POST_OFFICE_WORKER_URL: "",
+      INTROSPECT: false,
+      DB_NAME: "muffin-test-db",
+      DB_VERSION: "0.1",
+      DEBUG_SCOPE: {},
+    };
+  </script>
+  <script src="../atom-websdk/dist/sdk.min.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 16px; }
+    .test-section { border: 1px solid #ccc; padding: 16px; margin-bottom: 16px; border-radius: 4px; }
+    .pass { color: green; font-weight: bold; }
+    .fail { color: red; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>Muffin Framework Test Rig</h1>
+  <p id="sdk-status"></p>
+
+  <div class="test-section">
+    <h2>Test 1 — Basic render</h2>
+    <p>Component should render with correct uiVars set in constructor.</p>
+    <test-counter></test-counter>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2 — uiVars reactivity</h2>
+    <p>Clicking the button should increment the counter (re-render).</p>
+    <test-reactive></test-reactive>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3 — Inheritance (mirrors wity-app pattern)</h2>
+    <p>Subclass extends base, both have markupFunc, subclass overrides.</p>
+    <test-child></test-child>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 4 — uiVars set in constructor + onConnect</h2>
+    <p>Constructor sets defaults; onConnect sets real values. Both should render.</p>
+    <test-connect></test-connect>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 5 — stateSpace with idle root (mirrors wity-app pattern)</h2>
+    <p>Component defines stateSpace without idle; idle merged via defaultStateSpace.
+       onConnect calls switchState("loading") then switchState("loaded").
+       Should NOT show idle state after loaded. Should NOT cause extra renders.</p>
+    <test-state-page></test-state-page>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 6 — switchToIdleState does NOT trigger extra render</h2>
+    <p>Component with onConnect that has an await before switchState.
+       switchToIdleState() should not schedule a stale render.
+       Render count should be minimal (no spurious idle renders).</p>
+    <test-idle-no-render></test-idle-no-render>
+  </div>
+
+  <script type="module" src="./components.js"></script>
+</body>
+</html>

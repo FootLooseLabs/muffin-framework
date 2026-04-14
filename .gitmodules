@@ -1,0 +1,6 @@
+[submodule "element"]
+	path = element
+	url = git@github.com:FootLooseLabs/element.git
+[submodule "atom-websdk"]
+	path = atom-websdk
+	url = git@github.com:FootLooseLabs/atom-websdk.git

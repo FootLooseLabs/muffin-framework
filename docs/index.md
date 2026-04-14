@@ -3,7 +3,7 @@ layout: home
 
 hero:
   name: Muffin Framework
-  text: Low sugar, low ceremony frontend framework you can still enjoy with diabetes
+  text: Low sugar, low ceremony frontend framework for insulin-free development.
   tagline: Lightweight, composable frontend framework. Web Components based. Low ceremony. Antidote to frontend monoculture.
   actions:
     - theme: brand

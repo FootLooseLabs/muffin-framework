@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: Muffin Framework
-  text: element + atom-websdk
-  tagline: Lightweight, composable frontend framework. Web Components based. Footloose Labs internal.
+  text: Low sugar. Low ceremony frontend framework.
+  tagline: Web Components native. WebSocket first. No build-step tax.
   actions:
     - theme: brand
       text: Get Started

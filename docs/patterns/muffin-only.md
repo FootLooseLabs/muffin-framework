@@ -1,6 +1,6 @@
 # Muffin + Tailwind + Vite
 
-Standard project setup for a muffin application (e.g. wity-agent-builder, wity-app).
+Standard project setup for a muffin application.
 
 ## Project structure
 

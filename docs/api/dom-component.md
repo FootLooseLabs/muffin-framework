@@ -10,7 +10,7 @@ class MyComponent extends Muffin.DOMComponent {
 MyComponent.compose()
 ```
 
-## Static properties (declare on class)
+## Static properties
 
 | Property | Type | Description |
 |---|---|---|
@@ -19,10 +19,8 @@ MyComponent.compose()
 | `static stateSpace` | `object` | State machine definition. Keys = state names, values = `{ apriori: [...] }`. |
 | `static derived` | `object` | Computed state. Functions of `(uiVars, data)`. Merged into uiVars at render time. |
 | `static schema` | `object` | Default shape for `_data` (attribute data). |
-| `static advertiseAs` | `string` | Registers this component as a named PostOffice interface. |
-| `static parent` | `string` | Tag name of expected parent component. |
-| `static childscope` | `string` | Key under which this component registers in parent's `composedScope`. |
-| `static styleMarkup` | `function` | Returns CSS string for dynamic per-state styles. |
+| `static styleMarkup` | `function` | Returns CSS string. `rootEl` = scoped CSS selector for this instance. |
+| `static advertiseAs` | `string` | Name under which this component registers as a PostOffice interface. See [PostOffice](/guide/post-office). |
 
 ## Instance properties (set in `constructor()`)
 
@@ -79,13 +77,37 @@ HTML-escape a value for safe insertion into markup. Escapes `&`, `<`, `>`, `"`, 
 ### `getParent()`
 Returns the nearest ancestor `DOMComponent` instance.
 
-### `awaitChildLoad(childscope, timeout?)`
-Returns a Promise that resolves when the named child has rendered. Default timeout: 5000ms.
+## Composition
 
-## composedScope
-
-After composition, `this.composedScope` holds references to declared child components by `childscope` key:
+Components compose their children by overriding `.compose()`:
 
 ```js
-const child = this.composedScope.mainContent
+AppUI.compose = () => {
+    Sidebar.compose()
+    MainContent.compose()
+    AppUI.prototype.constructor._composeSelf()
+}
+AppUI.compose()
+```
+
+After composition, child components are accessible via `this.composedScope`:
+
+```js
+async onConnect() {
+    await this.awaitChildLoad('mainContent')
+    this.composedScope.mainContent.loadData()
+}
+```
+
+### `awaitChildLoad(key, timeout?)`
+Returns a Promise that resolves when the named child component has rendered. Default timeout: 5000ms.
+
+Child components declare their scope key and parent tag name as static properties:
+
+```js
+class Sidebar extends Muffin.DOMComponent {
+    static domElName = 'app-sidebar'
+    static parent = 'app-ui'
+    static childscope = 'sidebar'
+}
 ```

@@ -61,29 +61,3 @@ MyCard.compose()
 <my-card></my-card>
 ```
 
-## Bootstrap
-
-Projects initialize Muffin in a numbered script sequence:
-
-```js
-// main.js
-import './scripts/1_touchpoint.js'     // CDN load
-import './scripts/2_utilities.js'
-import './scripts/3_app.js'            // Router setup, root component
-import './scripts/4_polyfills.js'      // DOM extensions (until migrated to atom-websdk)
-import './components/index.js'         // all .compose() calls
-```
-
-```js
-// 3_app.js
-Muffin._router = new Muffin.Router({ routeDelimiter: '?', basePath: '/app/' })
-Muffin._router.addRouteConfig([
-    { name: 'home', defaultRoute: true },
-    { name: 'detail' }
-])
-```
-
-```html
-<script type="module">import('/src/main.js')</script>
-<app-ui></app-ui>
-```

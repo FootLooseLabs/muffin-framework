@@ -1,83 +1,78 @@
 # Polyfill Cleanup Guide
 
-The helpers previously copied into each project are now first-class exports in `@muffin/atom-websdk`. This page lists exactly what to remove and what replaces it.
+The helpers previously hand-written into each project's `4_polyfills.js` and `service-polyfill.ts` are now first-class exports in `@muffin/atom-websdk`. This page lists exactly what to remove and what replaces it.
 
 ## Projects affected
 
 | Project | File to clean up |
 |---|---|
-| wity-agent-builder | `src/4_polyfills.js` |
-| jity-dam | `src/service-polyfill.ts` |
-| wity-accounts-widget | `src/service-polyfill.ts` |
+| wity-agent-builder | `src/scripts/4_polyfills.js` |
+| jity-dam | `src/muffin-sdk/service-polyfill.ts` |
+| wity-accounts-widget | `src/muffin-sdk/service-polyfill.ts` |
 
 ---
 
-## DOM helpers (previously in `4_polyfills.js`)
+## DOMComponent prototype extensions
 
-These are now on `DOMComponent.prototype` via `applyDOMExtensions()` — available automatically on every component.
+These are now on `DOMComponent.prototype` via `applyDOMExtensions()` — called automatically by `applyAtomWebSDK()`. Remove from `4_polyfills.js`:
 
-| Old (polyfill) | New (built-in) |
+| Method | Notes |
 |---|---|
-| `this.getElement(sel)` | `this.getElement(sel)` — same API |
-| `this.getElements(sel)` | `this.getElements(sel)` — same API |
-| `this.toggleBtnBusyState(btn)` | `this.toggleBtnBusyState(btn)` — same API |
-| `this.toggleSurface(name)` | `this.toggleSurface(name)` — same API |
-| `this.toggleTargetTab(tab)` | `this.toggleTargetTab(tab)` — same API |
-| `this.awaitChildLoad(sel)` | `this.awaitChildLoad(sel, timeout?)` — timeout now optional, defaults 5s |
-| `this.copyToClipboard(text)` | `this.copyToClipboard(text)` — same API |
-| `this.notifyUser(msg, type)` | `this.notifyUser(msg, type)` — same API |
-| `this.callParent(method, ...args)` | `this.callParent(method, ...args)` — same API |
+| `getElement(selector)` | Identical API |
+| `getElements(selector)` | Identical API |
+| `toggleBtnBusyState(btnEl, state?)` | Identical API |
+| `toggleRootAttr(name, value?)` | Identical API |
+| `toggleSurface(name, state?, class?)` | Identical API |
+| `isSurfaceActive(name, class?)` | Identical API |
+| `toggleTargetSurface(srcEl, ev)` | Identical API |
+| `toggleTargetTab(srcEl, ev)` | Identical API |
+| `awaitChildLoad(name, timeout?)` | Timeout now optional, default 5s |
+| `initSubscriptions(subscriptions)` | Identical API |
+| `notifyUser(msg, duration?, interface?)` | Identical API |
+| `copyToClipboard(srcEl)` | Identical API |
+| `callParent(srcEl, ev)` | Identical API |
+| `callGrandParent(srcEl, ev)` | Identical API |
+| `getSessionUser()` | Identical API |
 
-**Remove:** The entire `4_polyfills.js` file and its import.
+Also remove the `Router.prototype.updateHistory` addition from `4_polyfills.js` — now in `dom_extensions.js`.
 
 ---
 
-## Global utilities (previously in `4_polyfills.js`)
+## Global utilities
+
+Remove from `4_polyfills.js`:
 
 ```js
-// OLD — remove from polyfills file
+// DELETE these — now applied by applyGlobalUtilities() inside applyAtomWebSDK()
 Array.prototype.splitIntoMultipleArrays = function(size) { ... }
 String.prototype.ellipsify = function(len) { ... }
 ```
 
-These are now applied by `applyGlobalUtilities()` which atom-websdk calls automatically on load.
-
-**Standalone functions** — import from atom-websdk if used:
+Standalone functions — import if used explicitly, or remove if only called via `this.delayTime()` etc.:
 
 ```js
-import { delayTime, reloadPage, generateSlug } from '@muffin/atom-websdk'
+import { delayTime, reloadPage, generateSlug, getSanitisedTextForSpeech } from '@muffin/atom-websdk'
 ```
 
 ---
 
-## Service base class (previously `service-polyfill.ts`)
+## Service base class
 
-```ts
-// OLD — remove this file entirely
-export class Service { ... }
-```
+Remove `service-polyfill.ts` (jity-dam, wity-accounts-widget) and `ElementWebService` from `4_polyfills.js` (wity-agent-builder) entirely.
 
-```js
-// NEW
-import { Service } from '@muffin/atom-websdk'
+`Muffin.Service` is now provided by `atom-websdk` with identical TTL cache, interface locking, and subscription locking.
 
-class UserService extends Service {
-    async getUser(id) {
-        return this.request('get-user', { id })
-    }
-}
-```
-
-`Service` now includes:
-- TTL cache (30s, Map-based, automatic cleanup)
-- Interface locking (prevents duplicate socket requests)
-- Subscription locking (prevents duplicate event subscriptions)
+No API change required in service classes — they extend `Muffin.Service` exactly as before.
 
 ---
 
 ## Checklist per project
 
-- [ ] Delete `4_polyfills.js` / `service-polyfill.ts`
-- [ ] Remove the import line for that file in `main.js` / `app.ts`
-- [ ] Verify `applyAtomWebSDK(Muffin)` is called on boot (it handles extensions + globals automatically)
-- [ ] Import `Service` from `@muffin/atom-websdk` in any service class file
+- [ ] Verify `applyAtomWebSDK(Muffin)` is called at boot (or CDN auto-applies it)
+- [ ] Delete `DOMComponent.prototype` extension block from `4_polyfills.js`
+- [ ] Delete `Router.prototype.updateHistory` from `4_polyfills.js`
+- [ ] Delete `Array.prototype` and `String.prototype` extensions from `4_polyfills.js`
+- [ ] Delete `ElementWebService` class from `4_polyfills.js`
+- [ ] Delete `service-polyfill.ts` (React projects) and remove its import
+- [ ] If `4_polyfills.js` is now empty, delete the file and remove its import from `main.js`
+- [ ] Smoke test: component DOM helpers, notification dispatch, a service request

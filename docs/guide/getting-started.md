@@ -1,28 +1,24 @@
 # Getting Started
 
-Muffin ships two packages:
+Muffin is a client-side platform built on Web Components. It has two layers:
 
 | Package | Purpose |
 |---|---|
-| `@muffin/element` | Core — DOMComponent, PostOffice, createStore, Router |
-| `@muffin/atom-websdk` | Extension — WebRequestSdk, Service, DOM helpers |
+| `@muffin/element` | Core — DOMComponent, PostOffice, createStore, Router, Lexeme |
+| `@muffin/atom-websdk` | Network layer — WebRequestSdk, Service, DOM extensions |
 
-Both are available via CDN (IIFE bundle) or as ES modules via pnpm.
+Both ship as a single CDN bundle (`sdk.min.js`) or as separate ES modules.
 
-## CDN (script tag)
+## CDN
 
 ```html
-<!-- element only -->
-<script src="https://cdn.footloose.io/element/0.9.2/element.min.js"></script>
-
-<!-- full SDK (element + atom-websdk bundled) -->
 <script src="https://cdn.footloose.io/atom-websdk/2.0.6/sdk.min.js"></script>
 ```
 
-After loading, the global `window.Muffin` is available:
+After loading, `window.Muffin` is available with everything:
 
 ```js
-const { DOMComponent, PostOffice, createStore, Router, Lexeme } = window.Muffin
+const { DOMComponent, PostOffice, createStore, Router, WebRequestSdk } = window.Muffin
 ```
 
 ## Vite project (ESM)
@@ -31,20 +27,13 @@ const { DOMComponent, PostOffice, createStore, Router, Lexeme } = window.Muffin
 pnpm add @muffin/element @muffin/atom-websdk
 ```
 
-```js
-import { DOMComponent, createStore } from '@muffin/element'
-import { WebRequestSdk, Service } from '@muffin/atom-websdk'
-```
-
 ## Defining a component
 
 ```js
-class MyCard extends DOMComponent {
-    __init__() {
-        this.uiVars = { title: 'Hello', count: 0 }
-    }
+class MyCard extends Muffin.DOMComponent {
+    static domElName = 'my-card'
 
-    markupFunc(data, uid, uiVars) {
+    static markupFunc(_data, uid, uiVars) {
         return `
             <div class="card">
                 <h2>${uiVars.title}</h2>
@@ -54,14 +43,47 @@ class MyCard extends DOMComponent {
         `
     }
 
-    increment() {
+    constructor() {
+        super()
+        this.uiVars.title = 'Hello'
+        this.uiVars.count = 0
+    }
+
+    increment(srcEl, ev) {
         this.uiVars.count++   // triggers re-render automatically
     }
 }
 
-customElements.define('my-card', MyCard)
+MyCard.compose()
 ```
 
 ```html
 <my-card></my-card>
+```
+
+## Bootstrap pattern
+
+Projects initialize Muffin in a numbered script sequence:
+
+```js
+// main.js
+import './scripts/1_touchpoint.js'     // CDN load
+import './scripts/2_utilities.js'
+import './scripts/3_app.js'            // Router setup, root component
+import './scripts/4_polyfills.js'      // DOM extensions (until migrated to atom-websdk)
+import './components/index.js'         // all .compose() calls
+```
+
+```js
+// 3_app.js
+Muffin._router = new Muffin.Router({ routeDelimiter: '?', basePath: '/app/' })
+Muffin._router.addRouteConfig([
+    { name: 'home', defaultRoute: true },
+    { name: 'detail' }
+])
+```
+
+```html
+<script type="module">import('/src/main.js')</script>
+<app-ui></app-ui>
 ```

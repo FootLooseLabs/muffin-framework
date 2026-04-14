@@ -1,74 +1,87 @@
 # Stores
 
-`createStore()` creates a named reactive store shared across components. Any component subscribed to a store re-renders automatically when it changes.
+`createStore()` creates a named reactive store. Any component that declares a store re-renders automatically when it changes. Stores are plain JS objects — defined once, imported wherever needed.
 
-## Basic usage
+## Creating a store
 
 ```js
-import { createStore } from '@muffin/element'
-
-const cartStore = createStore('cart', {
-    items: [],
-    total: 0
+const sessionStore = Muffin.createStore('session', {
+    user: null,
+    token: null
 })
 ```
 
-## API
+With options:
 
 ```js
-createStore(name, initialState, options?)
+const sessionStore = Muffin.createStore('session',
+    { user: null, token: null },
+    {
+        persist: true,            // save to IndexedDB via localforage, rehydrate on load
+        socket: 'WebInterface',   // PostOffice interface to sync with
+        socketLabel: 'session-update'
+    }
+)
 ```
-
-| Option | Type | Description |
-|---|---|---|
-| `persist` | `boolean` | Persist state to IndexedDB via localforage. Rehydrates on next load. |
-| `socket` | `string` | PostOffice interface name. Store changes sync over that socket. |
-
-Returns a frozen store object:
-
-| Method | Description |
-|---|---|
-| `store.get()` | Returns current state snapshot |
-| `store.set(partial)` | Merges partial state, notifies all subscribers |
-| `store.reset()` | Resets to initial state |
-| `store.subscribe(fn)` | Calls `fn(state)` on every change. Returns unsubscribe function. |
 
 ## Using in a component
 
-Declare stores on the component. They are passed as the 6th argument to `markupFunc` and trigger re-renders automatically.
+Declare stores in `constructor()`. They are passed as the 6th argument to `markupFunc` as a snapshot:
 
 ```js
-class CartWidget extends DOMComponent {
-    __init__() {
-        this.stores = { cart: cartStore }
-        this.uiVars = { open: false }
+class UserBadge extends Muffin.DOMComponent {
+    static domElName = 'user-badge'
+
+    constructor() {
+        super()
+        this.stores = { session: sessionStore }
     }
 
-    markupFunc(data, uid, uiVars, routeVars, _c, stores) {
-        const { items, total } = stores.cart
-        return `
-            <div class="cart">
-                <span>${items.length} items — $${total}</span>
-            </div>
-        `
+    static markupFunc(_data, uid, uiVars, routeVars, _constructor, stores) {
+        if (!stores.session.user) return `<span>Not logged in</span>`
+        return `<span>${stores.session.user.name}</span>`
     }
 }
+```
+
+Store changes automatically trigger re-render on any component that has declared it.
+
+## Store API
+
+```js
+sessionStore.get()                   // → current state snapshot
+sessionStore.set({ user: userData }) // partial merge, notifies all subscribers
+sessionStore.reset()                 // resets to initial state
+const unsub = sessionStore.subscribe(state => { ... })  // returns unsubscribe fn
+```
+
+## Reading outside components
+
+```js
+sessionStore.subscribe((state) => {
+    if (!state.user) redirectToLogin()
+})
+
+const current = sessionStore.get()
 ```
 
 ## Persistence
 
 ```js
-const sessionStore = createStore('session', { user: null }, { persist: true })
+const cartStore = Muffin.createStore('cart', { items: [] }, { persist: true })
 ```
 
-State is written to IndexedDB after every `set()` call and rehydrated automatically on page load. No extra code needed in components.
+State survives page refresh. Written to IndexedDB after every `set()`. Rehydrated before first render.
 
 ## Socket sync
 
 ```js
-const liveStore = createStore('live-feed', { posts: [] }, {
-    socket: 'main-socket'   // PostOffice interface name
+const liveStore = Muffin.createStore('live', { feed: [] }, {
+    socket: 'WebInterface',
+    socketLabel: 'feed-update'
 })
 ```
 
-Incoming messages on `main-socket` update the store. Store `set()` calls publish back to the socket.
+Incoming messages on the named PostOffice interface update the store. Store `set()` calls publish back to the socket.
+
+This gives you something React+Zustand cannot do out of the box: a store that auto-syncs from a WebSocket subscription and persists to IndexedDB, declared in a single line.

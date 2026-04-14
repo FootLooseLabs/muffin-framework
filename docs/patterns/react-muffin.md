@@ -1,149 +1,138 @@
-# React + Muffin Islands
+# React + Muffin
 
-Pattern for projects that use React as the primary UI layer with muffin Web Components as isolated islands — typically for real-time widgets, complex form elements, or legacy muffin components being incrementally migrated.
+Muffin doesn't constrain a single pattern. In React projects (e.g. jity-dam), muffin is used as the **WebSocket and service transport layer** while React owns the UI. This is one valid pattern — not a workaround.
 
 ## How it works
 
-Muffin Web Components live inside React JSX like any native HTML element. React renders the tag; muffin's `connectedCallback` takes over the internals. Communication between React and muffin happens through PostOffice (pub/sub) — they share no state directly.
+Muffin loads into `window.Muffin`. React components import a `WebInterface` singleton and call service classes exactly as muffin-only projects do. No `DOMComponent` subclasses needed.
 
 ```
-React tree
-  └── <div className="layout">
-        ├── <ReactHeader />          ← React component
-        ├── <live-feed-widget />     ← Muffin Web Component
-        └── <ReactSidebar />        ← React component
+React component
+  └── hook (useEntityManager, useWebInterface)
+       └── Service class (extends Muffin.Service)
+            └── Muffin.WebInterface.request()
+                 └── WebSocket → microservice
 ```
 
 ## Setup
 
-```bash
-pnpm add @muffin/element @muffin/atom-websdk
-```
-
-Bootstrap muffin once, before React mounts — in `main.tsx`:
+Load muffin once before React mounts (in `main.tsx`):
 
 ```ts
-import { applyAtomWebSDK } from '@muffin/atom-websdk'
-import { DOMComponent, PostOffice, createStore } from '@muffin/element'
+// src/main.tsx
+import { loadAtomWebSDK } from './muffin-sdk'
 
-window.Muffin = { DOMComponent, PostOffice, createStore }
-applyAtomWebSDK(window.Muffin)
+await loadAtomWebSDK()   // sets window.Muffin, connects WebInterface
 
-// Register muffin components
-import './muffin/live-feed-widget.js'
-import './muffin/notification-bell.js'
-
-// Then mount React
 import { createRoot } from 'react-dom/client'
 import App from './App'
 createRoot(document.getElementById('root')!).render(<App />)
 ```
 
-## Using a muffin component in JSX
-
-TypeScript needs the custom element declared:
+`muffin-sdk/index.ts` — thin wrapper:
 
 ```ts
-// src/custom-elements.d.ts
-declare namespace JSX {
-    interface IntrinsicElements {
-        'live-feed-widget': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>
-        'notification-bell': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>
+export async function loadAtomWebSDK() {
+    // Load sdk.min.js from CDN if not already loaded
+    if (window.Muffin) return
+    await loadScript('https://cdn.footloose.io/atom-websdk/2.0.6/sdk.min.js')
+    Muffin.WebInterface = new Muffin.WebRequestSdk({ label: 'sandbox' })
+    await Muffin.WebInterface.connect()
+}
+
+export function getMuffin() { return window.Muffin }
+```
+
+## Service layer (TypeScript)
+
+```ts
+// src/services/asset-service.ts
+import { getMuffin } from '../muffin-sdk'
+
+const Muffin = getMuffin()
+
+class AssetService extends Muffin.Service {
+    static name = 'AssetService'
+
+    static Interfaces = {
+        Dam: '@jity/dam:::AssetManagementService'
     }
+
+    static async getAssets(filters: AssetFilters): Promise<Asset[]> {
+        const res = await Muffin.WebInterface.request(
+            this.Interfaces.Dam,
+            { subject: 'getAssets', params: filters },
+            { MAX_RESPONSE_TIME: 10000 }
+        )
+        return res.result
+    }
+}
+
+export default AssetService
+```
+
+## React hook
+
+```ts
+// src/hooks/useAssets.ts
+import { useState, useEffect } from 'react'
+import AssetService from '../services/asset-service'
+
+export function useAssets(filters: AssetFilters) {
+    const [assets, setAssets] = useState<Asset[]>([])
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        AssetService.getAssets(filters).then(data => {
+            setAssets(data)
+            setLoading(false)
+        })
+    }, [filters])
+
+    return { assets, loading }
 }
 ```
 
+## React component
+
 ```tsx
-export function Dashboard() {
+export function AssetGrid({ folderId }: { folderId: string }) {
+    const { assets, loading } = useAssets({ folderId })
+
+    if (loading) return <Spinner />
     return (
-        <div className="dashboard">
-            <DashboardHeader />
-            <live-feed-widget />
+        <div className="grid">
+            {assets.map(a => <AssetCard key={a.id} asset={a} />)}
         </div>
     )
 }
 ```
 
-## React → Muffin communication (via PostOffice)
+## TypeScript declarations
+
+Declare `window.Muffin` types to avoid TS errors:
 
 ```ts
-// React side — publish an event
-import { PostOffice } from '@muffin/element'  // or window.Muffin.PostOffice
-
-function FilterBar() {
-    const applyFilter = (filter: string) => {
-        PostOffice.publishToInterface('ui-events', { type: 'filter-changed', filter })
-    }
-    return <button onClick={() => applyFilter('active')}>Active</button>
-}
-```
-
-```js
-// Muffin component — listen for the event
-class LiveFeedWidget extends DOMComponent {
-    __init__() {
-        this.uiVars = { items: [], filter: 'all' }
-    }
-
-    connectedCallback() {
-        super.connectedCallback()
-        PostOffice.addGlobalListener('ui-events', (msg) => {
-            if (msg.type === 'filter-changed') {
-                this.uiVars.filter = msg.filter
-            }
-        })
+// src/muffin-sdk/muffin.d.ts
+declare global {
+    interface Window {
+        Muffin: {
+            DOMComponent: typeof DOMComponent
+            PostOffice: typeof PostOffice
+            WebRequestSdk: typeof WebRequestSdk
+            Service: typeof Service
+            WebInterface: InstanceType<typeof WebRequestSdk>
+        }
     }
 }
 ```
 
-## Muffin → React communication (via CustomEvent)
+## When to use which pattern
 
-```js
-// Muffin component — dispatch a native DOM event
-class NotificationBell extends DOMComponent {
-    openPanel() {
-        this.dispatchEvent(new CustomEvent('notification-open', { bubbles: true }))
-    }
-}
-```
+| Use muffin-only | Use React + muffin transport |
+|---|---|
+| App is primarily a WebSocket-driven tool (agent builder, content editor) | Tool is UI-heavy with complex state, forms, conditional flows |
+| Deep use of state machine, PostOffice, surface/tab patterns | Team has React expertise, component trees are large |
+| CDN-first deployment, no build complexity | TypeScript throughout is a hard requirement |
 
-```tsx
-// React side — listen on the container ref
-function App() {
-    const ref = useRef<HTMLDivElement>(null)
-
-    useEffect(() => {
-        const handler = () => setNotifOpen(true)
-        ref.current?.addEventListener('notification-open', handler)
-        return () => ref.current?.removeEventListener('notification-open', handler)
-    }, [])
-
-    return <div ref={ref}><notification-bell /></div>
-}
-```
-
-## Shared stores
-
-Stores created with `createStore()` are accessible from both sides since they live in the JS module scope.
-
-```ts
-// src/stores/notifications.js
-import { createStore } from '@muffin/element'
-export const notifStore = createStore('notifications', { unread: 0, items: [] })
-```
-
-```ts
-// React — read the store
-import { notifStore } from '../stores/notifications'
-const [count, setCount] = useState(notifStore.get().unread)
-notifStore.subscribe(s => setCount(s.unread))
-```
-
-```js
-// Muffin — declare the store
-class NotificationBell extends DOMComponent {
-    __init__() {
-        this.stores = { notifications: notifStore }
-    }
-}
-```
+Both patterns use the same `Service` classes and `WebInterface` singleton — only the UI layer differs.

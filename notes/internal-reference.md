@@ -327,7 +327,22 @@ this.isSurfaceActive('panel-a')          // → boolean
 
 ---
 
-## 14. Polyfills Status
+## 14. styleMarkup — actual pattern
+
+`rootEl` is passed as `[data-component=uid]` by the framework. Pattern is `${rootEl}` inside a `<style>` tag:
+
+```js
+static styleMarkup(rootEl, currentState) {
+    return `<style type="text/css">
+        ${rootEl} { position: relative; }
+        ${rootEl} .spinner { display: ${currentState === 'loading' ? 'block' : 'none'}; }
+    </style>`
+}
+```
+
+NOT `:host` selectors — that was incorrect in early docs.
+
+## 15. Polyfills Status
 
 These are in project `4_polyfills.js` / `service-polyfill.ts`. They have been promoted to atom-websdk in the modernized version but projects haven't migrated yet.
 

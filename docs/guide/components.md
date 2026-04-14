@@ -37,7 +37,7 @@ UserProfile.compose()
 <user-profile></user-profile>
 ```
 
-## Registration — `.compose()`, not `customElements.define()`
+## Registration
 
 `.compose()` registers the Web Component and wires up the Muffin internals.
 
@@ -200,13 +200,18 @@ class ItemList extends Muffin.DOMComponent {
 
 ## styleMarkup
 
-Dynamic styles per component state:
+Scoped styles per component. `rootEl` is a CSS selector string (`[data-component=uid]`) that scopes rules to this instance:
 
 ```js
 static styleMarkup(rootEl, currentState) {
-    return `
-        :host { display: block; }
-        :host([state="loading"]) .spinner { display: block; }
-    `
+    return `<style type="text/css">
+        ${rootEl} {
+            position: relative;
+            display: block;
+        }
+        ${rootEl} .spinner {
+            display: ${currentState === 'loading' ? 'block' : 'none'};
+        }
+    </style>`
 }
 ```

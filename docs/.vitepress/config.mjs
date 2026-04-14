@@ -9,7 +9,8 @@ export default defineConfig({
         nav: [
             { text: 'Guide', link: '/guide/getting-started' },
             { text: 'API', link: '/api/dom-component' },
-            { text: 'Patterns', link: '/patterns/muffin-only' }
+            { text: 'Patterns', link: '/patterns/muffin-only' },
+            { text: 'Migration', link: '/migration/v3' }
         ],
 
         sidebar: [
@@ -40,8 +41,13 @@ export default defineConfig({
                 text: 'Patterns',
                 items: [
                     { text: 'Muffin + Tailwind + Vite', link: '/patterns/muffin-only' },
-                    { text: 'React + Muffin Islands', link: '/patterns/react-muffin' },
-                    { text: 'Polyfill Cleanup Guide', link: '/patterns/polyfill-cleanup' }
+                    { text: 'React + Muffin', link: '/patterns/react-muffin' }
+                ]
+            },
+            {
+                text: 'Migration',
+                items: [
+                    { text: 'Upgrading to v3.0.0', link: '/migration/v3' }
                 ]
             }
         ],

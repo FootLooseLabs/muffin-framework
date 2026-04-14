@@ -61,7 +61,7 @@ MyCard.compose()
 <my-card></my-card>
 ```
 
-## Bootstrap pattern
+## Bootstrap
 
 Projects initialize Muffin in a numbered script sequence:
 

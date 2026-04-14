@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: Muffin Framework
-  text: Low sugar. Low ceremony frontend framework.
-  tagline: Web Components native. WebSocket first. No build-step tax.
+  text: Low sugar, low ceremony frontend framework
+  tagline: Lightweight, composable frontend framework. Web Components based.
   actions:
     - theme: brand
       text: Get Started

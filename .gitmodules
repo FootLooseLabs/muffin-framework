@@ -4,3 +4,6 @@
 [submodule "atom-websdk"]
 	path = atom-websdk
 	url = git@github.com:FootLooseLabs/atom-websdk.git
+[submodule "muffin-v2-polyfills"]
+	path = muffin-v2-polyfills
+	url = git@github.com:FootLooseLabs/muffin-v2-polyfills.git

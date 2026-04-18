@@ -47,7 +47,8 @@ export default defineConfig({
             {
                 text: 'Migration',
                 items: [
-                    { text: 'Upgrading to v3.0.0', link: '/migration/v3' }
+                    { text: 'Upgrading to v3.0.0', link: '/migration/v3' },
+                    { text: 'Component Migration: v2 → v3', link: '/migration/components' }
                 ]
             }
         ],

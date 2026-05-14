@@ -22,4 +22,6 @@ features:
     details: atom-websdk extends element with WebRequestSdk, Service base class, and PostOffice socket abstraction.
 ---
 
-
+> For AI agents and coding assistants:
+> [llms.txt](https://footlooselabs.github.io/muffin-framework/llms.txt) ·
+> [llms-full.txt](https://footlooselabs.github.io/muffin-framework/llms-full.txt)

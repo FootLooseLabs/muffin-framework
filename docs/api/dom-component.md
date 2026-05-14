@@ -77,6 +77,24 @@ HTML-escape a value for safe insertion into markup. Escapes `&`, `<`, `>`, `"`, 
 ### `getParent()`
 Returns the nearest ancestor `DOMComponent` instance.
 
+## Dynamic attributes on child components
+
+When a parent re-renders and changes an attribute on a child Muffin custom element (e.g. `<lucide-icon icon="pause">` → `<lucide-icon icon="play">`), the DOM patcher updates the attribute on the child's DOM node but the child component does **not** automatically re-render. Muffin has no equivalent of `observedAttributes` / `attributeChangedCallback`.
+
+**Pattern: inline rendering instead of attribute passing**
+
+For dynamic values that need to reflect in a child's output, render the output directly in the parent template rather than passing an attribute:
+
+```js
+// Instead of this (child won't update):
+`<lucide-icon icon="${uiVars.playState === 'playing' ? 'pause' : 'play'}"></lucide-icon>`
+
+// Do this (parent reconciler replaces the SVG wholesale):
+`${LucideIcon.renderIcon(uiVars.playState === 'playing' ? 'pause' : 'play', 20)}`
+```
+
+This works because the parent's DOM reconciler replaces the inline output on every render, so the output always reflects current state.
+
 ## Composition
 
 Components compose their children by overriding `.compose()`:

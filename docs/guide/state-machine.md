@@ -85,6 +85,29 @@ document.querySelector('order-card').addEventListener('state-change', (e) => {
 })
 ```
 
+## composedScope after switchState
+
+`switchState` schedules a render via `queueMicrotask` — the new markup is not in the DOM synchronously. Child elements declared in the new state's markup (via `childscope`) are not yet mounted in `composedScope` immediately after the call.
+
+```js
+// WRONG — composedScope.inputBar is not mounted yet
+this.switchState('loaded')
+this.composedScope.inputBar.setControlledSpace(space)   // silent no-op
+
+// CORRECT — yield a tick first
+this.switchState('loaded')
+await new Promise(r => setTimeout(r, 0))
+this.composedScope.inputBar.setControlledSpace(space)
+```
+
+If the child exposes a method you need to call right after a state switch, `awaitChildLoad` is the cleaner alternative — it resolves as soon as the child's `onConnect` has fired:
+
+```js
+this.switchState('loaded')
+await this.awaitChildLoad('inputBar')
+this.composedScope.inputBar.setControlledSpace(space)
+```
+
 ## When to use it
 
 State machines are most valuable when:

@@ -12,7 +12,7 @@ Both ship as a single CDN bundle (`sdk.min.js`) or as separate ES modules.
 ## CDN
 
 ```html
-<script src="https://cdn.footloose.io/atom-websdk/2.0.6/sdk.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.1.7/dist/sdk.min.js"></script>
 ```
 
 After loading, `window.Muffin` is available with everything:

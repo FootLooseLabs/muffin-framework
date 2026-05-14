@@ -10,7 +10,8 @@ export default defineConfig({
             { text: 'Guide', link: '/guide/getting-started' },
             { text: 'API', link: '/api/dom-component' },
             { text: 'Patterns', link: '/patterns/muffin-only' },
-            { text: 'Migration', link: '/migration/v3' }
+            { text: 'Migration', link: '/migration/v3' },
+            { text: 'llms.txt', link: '/llms.txt' }
         ],
 
         sidebar: [
@@ -49,6 +50,13 @@ export default defineConfig({
                 items: [
                     { text: 'Upgrading to v3.0.0', link: '/migration/v3' },
                     { text: 'Component Migration: v2 → v3', link: '/migration/components' }
+                ]
+            },
+            {
+                text: 'Reference',
+                items: [
+                    { text: 'Known Issues', link: '/known-issues' },
+                    { text: 'Changelog', link: '/changelog' }
                 ]
             }
         ],

@@ -1,0 +1,41 @@
+# Muffin Framework
+
+Muffin is a client-side Web Components framework built by Footloose Labs. It has two packages:
+- `@muffin/element` — core: DOMComponent, PostOffice, createStore, Router
+- `@muffin/atom-websdk` — network layer: WebRequestSdk, Service, DOM extensions
+
+Both ship as a single CDN bundle (`sdk.min.js`). After loading, everything is available under `window.Muffin`.
+
+Current stable version: atom-websdk 3.1.7 / element 0.9.3
+CDN: https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.1.7/dist/sdk.min.js
+
+---
+
+## Documentation pages
+
+### Guide
+- [Getting Started](/guide/getting-started) — CDN setup, Vite/ESM install, first component
+- [Components](/guide/components) — DOMComponent lifecycle, markupFunc, event binding, data attributes, derived state, scoped styles
+- [Reactive State (uiVars)](/guide/ui-vars) — Proxy-based local state, batched rendering, shallow proxy caveats, uiVars vs stores
+- [Stores](/guide/stores) — createStore(), shared reactive state, persistence (IndexedDB), socket sync
+- [State Machine](/guide/state-machine) — stateSpace, transitionSpace, switchState, composedScope timing after switchState
+- [PostOffice](/guide/post-office) — cross-component pub/sub, advertised interfaces, WebSocket routing, initSubscriptions
+- [WebSocket SDK](/guide/websdk) — WebRequestSdk, interface address syntax (receptive `:::` vs expressive `|||`), Service pattern
+
+### API Reference
+- [DOMComponent](/api/dom-component) — full static/instance property reference, lifecycle, dynamic child attribute limitation, composedScope
+- [createStore()](/api/create-store) — parameters, return value, persistence, socket sync, component declaration pattern
+- [PostOffice](/api/post-office) — static methods, sockets, PostOffice.Socket
+- [Service](/api/service) — static service pattern, subscribe from static context, built-in TTL cache, interface/subscription locking
+- [DOM Extensions](/api/dom-extensions) — getElement, getElements, toggleBtnBusyState, toggleRootAttr, toggleSurface, awaitChildLoad, initSubscriptions, callParent
+- [WebRequestSdk](/api/web-request-sdk) — connect, request, websubscribe, communicate, Muffin.WebInterface singleton
+
+### Patterns
+- [Muffin + Tailwind + Vite](/patterns/muffin-only) — project structure, 3_app.js, component and service example
+
+### Migration
+- [Upgrading to v3.0.0](/migration/v3) — breaking changes from v2, new createStore/derived/esc features, upgrade checklist
+- [Component Migration: v2 → v3](/migration/components) — reactive uiVars, nested mutations, renderSelectively removal, childscope, getParent timing
+
+### Reference
+- [Known Issues](/known-issues) — confirmed bugs, architectural limitations, and resolved issues from real-world projects

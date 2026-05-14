@@ -5,10 +5,25 @@ Applied to `DOMComponent.prototype` by `applyAtomWebSDK()`. Available on every c
 ## Element queries
 
 ### `this.getElement(selector)`
-First matching element within the component.
+Returns the first matching element within the component's rendered DOM. Equivalent to a scoped `querySelector` — searches only within this component's root, not the full document.
+
+```js
+postRender() {
+    const input = this.getElement('input[name="title"]')
+    input.focus()
+}
+```
 
 ### `this.getElements(selector)`
-All matching elements as an array.
+Returns all matching elements as an array (not a NodeList). Equivalent to a scoped `querySelectorAll`.
+
+```js
+postRender() {
+    this.getElements('.tab').forEach(tab => tab.classList.remove('_active'))
+}
+```
+
+> **Prefer these over raw `querySelector`.** Calling `document.querySelector` or `this._getDomNode().querySelector` directly works but bypasses scoping and couples to internal APIs. `_getDomNode()` is an internal method and not part of the public API.
 
 ## UI helpers
 

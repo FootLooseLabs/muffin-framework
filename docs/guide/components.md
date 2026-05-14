@@ -142,7 +142,7 @@ onSelect(srcEl, ev) {
 }
 ```
 
-Supported: `on-click`, `on-change`, `on-input`, `on-scroll`, `on-keyup`, `on-load`, `on-contextmenu`.
+Supported: `on-click`, `on-change`, `on-input`, `on-keydown`, `on-keyup`, `on-focus`, `on-blur`, `on-scroll`, `on-dblclick`, `on-load`, `on-contextmenu`.
 `on-contextmenu` automatically calls `ev.preventDefault()`.
 
 ## Conditional rendering

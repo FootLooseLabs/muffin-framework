@@ -1,0 +1,697 @@
+# Muffin Framework — Full Documentation
+
+Muffin is a client-side Web Components framework built by Footloose Labs. It has two packages:
+- `@muffin/element` — core: DOMComponent, PostOffice, createStore, Router
+- `@muffin/atom-websdk` — network layer: WebRequestSdk, Service, DOM extensions
+
+Both ship as a single CDN bundle. After loading, everything is available under `window.Muffin`.
+
+Current stable version: atom-websdk 3.1.7 / element 0.9.3
+CDN: https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.1.7/dist/sdk.min.js
+
+---
+
+# Getting Started
+
+Muffin is a client-side platform built on Web Components. It has two layers:
+
+| Package | Purpose |
+|---|---|
+| `@muffin/element` | Core — DOMComponent, PostOffice, createStore, Router, Lexeme |
+| `@muffin/atom-websdk` | Network layer — WebRequestSdk, Service, DOM extensions |
+
+Both ship as a single CDN bundle (`sdk.min.js`) or as separate ES modules.
+
+## CDN
+
+```html
+<script src="https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.1.6/dist/sdk.min.js"></script>
+```
+
+After loading, `window.Muffin` is available with everything:
+
+```js
+const { DOMComponent, PostOffice, createStore, Router, WebRequestSdk } = window.Muffin
+```
+
+## Vite project (ESM)
+
+```bash
+pnpm add @muffin/element @muffin/atom-websdk
+```
+
+## Defining a component
+
+```js
+class MyCard extends Muffin.DOMComponent {
+    static domElName = 'my-card'
+
+    static markupFunc(_data, uid, uiVars) {
+        return `
+            <div class="card">
+                <h2>${uiVars.title}</h2>
+                <p>Count: ${uiVars.count}</p>
+                <button on-click="increment">+</button>
+            </div>
+        `
+    }
+
+    constructor() {
+        super()
+        this.uiVars.title = 'Hello'
+        this.uiVars.count = 0
+    }
+
+    increment(srcEl, ev) {
+        this.uiVars.count++   // triggers re-render automatically
+    }
+}
+
+MyCard.compose()
+```
+
+```html
+<my-card></my-card>
+```
+
+---
+
+# Components
+
+Every muffin component extends `Muffin.DOMComponent` (which extends `HTMLElement`). The component IS the DOM element — no wrapper, no virtual node.
+
+## Defining a component
+
+`markupFunc` and `stateSpace` are **static**. Instance state lives in `constructor()` via `this.uiVars`.
+
+## Registration
+
+`.compose()` registers the Web Component and wires up the Muffin internals.
+
+Batch composition — a parent composes its children:
+
+```js
+AppUI.compose = () => {
+    SideNav.compose()
+    MainContent.compose()
+    AppUI.prototype.constructor._composeSelf()
+}
+AppUI.compose()
+```
+
+## Lifecycle
+
+| Method | When |
+|---|---|
+| `constructor()` | Set `uiVars`, `stores`, `transitionSpace` here |
+| `onConnect()` | After first render. Good for subscriptions and async data loading. |
+| `disconnectedCallback()` | When removed from DOM. Always call `super.disconnectedCallback()`. |
+
+## Passing data via attributes
+
+```html
+<user-card data='{"id": 1, "name": "Ankur"}'></user-card>
+```
+
+Available as `_data` in `markupFunc`. Default shape declared via `static schema`.
+
+## Event binding
+
+Attach handlers via `on-*` attributes. Handlers receive `(srcEl, ev)`.
+
+Supported: `on-click`, `on-change`, `on-input`, `on-keydown`, `on-keyup`, `on-focus`, `on-blur`, `on-scroll`, `on-dblclick`, `on-load`, `on-contextmenu`.
+`on-contextmenu` automatically calls `ev.preventDefault()`.
+
+## Conditional rendering
+
+```js
+return `
+    <p render-if="uiVars.loading">Loading…</p>
+    <p render-if="!uiVars.loading">${uiVars.message}</p>
+`
+```
+
+False = `display:none`, element stays in DOM.
+
+## XSS protection
+
+`esc()` is available in every `markupFunc`:
+
+```js
+return `<p>${this.esc(uiVars.userInput)}</p>`
+```
+
+## Derived (computed) state
+
+```js
+static derived = {
+    isEmpty: (uiVars, data) => uiVars.items.length === 0,
+    visibleCount: (uiVars, data) => uiVars.items.filter(i => i.visible).length
+}
+```
+
+Evaluated fresh on every render, merged into `uiVars`. Read-only — never set derived keys directly.
+
+## Unique instance ID
+
+Each instance gets a `uid`. Use it to scope IDs:
+
+```js
+return `
+    <label for="input-${uid}">Name</label>
+    <input id="input-${uid}" type="text" />
+`
+```
+
+## styleMarkup
+
+Scoped styles per component. `rootEl` is a CSS selector scoped to this instance:
+
+```js
+static styleMarkup(rootEl, currentState) {
+    return `<style>
+        ${rootEl} { position: relative; }
+        ${rootEl} .spinner { display: ${currentState === 'loading' ? 'block' : 'none'}; }
+    </style>`
+}
+```
+
+---
+
+# Reactive State (uiVars)
+
+`uiVars` is a Proxy-wrapped object. Setting any property automatically schedules a batched re-render.
+
+## Auto-render on mutation
+
+```js
+this.uiVars.count++   // schedules render automatically
+```
+
+Multiple mutations in the same call produce one render (batched via `queueMicrotask`).
+
+## Forcing an immediate render
+
+```js
+this.uiVars.loading = true
+this.render()   // flush now, before awaiting async work
+```
+
+## Shallow proxy
+
+The Proxy is **shallow** — mutating a nested property won't trigger a render. Reassign the top-level key:
+
+```js
+// Does NOT trigger render
+this.uiVars.user.name = 'Ankur'
+
+// Correct
+this.uiVars.user = { ...this.uiVars.user, name: 'Ankur' }
+```
+
+## uiVars vs stores
+
+| | `uiVars` | `createStore()` |
+|---|---|---|
+| Scope | Local to one component instance | Shared across any number of components |
+| Persistence | No | Optional (IndexedDB) |
+| Use for | UI state, loading flags, form input | Session, domain data, anything shared |
+
+---
+
+# Stores
+
+`createStore()` creates a named reactive store. Any component that declares a store re-renders automatically when it changes.
+
+## Creating a store
+
+```js
+const sessionStore = Muffin.createStore('session',
+    { user: null, token: null },
+    {
+        persist: true,            // save to IndexedDB, rehydrate on load
+        socket: 'WebInterface',   // PostOffice interface to sync with
+        socketLabel: 'session-update'
+    }
+)
+```
+
+## Using in a component
+
+```js
+constructor() {
+    super()
+    this.stores = { session: sessionStore }
+}
+
+static markupFunc(_data, uid, uiVars, routeVars, _constructor, stores) {
+    if (!stores.session.user) return `<span>Not logged in</span>`
+    return `<span>${stores.session.user.name}</span>`
+}
+```
+
+## Store API
+
+```js
+store.get()                      // → current state snapshot
+store.set({ user: userData })    // partial merge, notifies all subscribers
+store.reset()                    // resets to initial state
+const unsub = store.subscribe(state => { ... })
+```
+
+---
+
+# State Machine
+
+Every component has a built-in state machine via `static stateSpace` and instance `transitionSpace`.
+
+## Defining states
+
+```js
+static stateSpace = {
+    idle:       { apriori: ['loading', 'error'] },
+    loading:    { apriori: ['idle'] },
+    error:      { apriori: ['loading'] },
+}
+```
+
+`apriori` — states allowed to transition INTO this state.
+
+## Transition hooks
+
+```js
+constructor() {
+    super()
+    this.transitionSpace = {
+        'idle <to> loading': () => this.loadData(),
+        'loading <to> error': () => { this.uiVars.errorMsg = 'Failed' }
+    }
+}
+```
+
+## Switching state
+
+```js
+this.switchState('loading')
+this.switchToIdleState()   // alias for switchState('idle')
+```
+
+## composedScope after switchState
+
+`switchState` schedules a render via `queueMicrotask` — the new markup is not in the DOM synchronously. Child elements in the new state's markup are not yet mounted in `composedScope` immediately after the call.
+
+Use `awaitChildLoad` — it resolves deterministically when the child's `connectedCallback` fires:
+
+```js
+// WRONG — composedScope.inputBar not mounted yet
+this.switchState('loaded')
+this.composedScope.inputBar.setData(data)
+
+// CORRECT
+this.switchState('loaded')
+await this.awaitChildLoad('inputBar')
+this.composedScope.inputBar.setData(data)
+```
+
+---
+
+# PostOffice
+
+Cross-component messaging layer. Handles local pub/sub and wraps WebSocket connections into named interfaces.
+
+## Interfaces
+
+```js
+// Publish
+Muffin.PostOffice.sockets.global.dispatchMessage('user-selected', { id: 42 })
+
+// Subscribe (inside a component)
+this.interface.on('user-selected', (msg) => {
+    this.uiVars.selectedId = msg.id
+})
+```
+
+## Advertising an interface
+
+```js
+class NotificationDialog extends Muffin.DOMComponent {
+    static domElName = 'notification-dialog'
+    static advertiseAs = 'NotificationManager'
+
+    onConnect() {
+        this.advertisedInterface = Muffin.PostOffice.getOrCreateInterface('NotificationManager')
+        this.advertisedInterface.on('notify-foreground', (msg) => {
+            this.uiVars.message = msg.msgTxt
+        })
+    }
+}
+```
+
+## PostOffice vs stores
+
+| | PostOffice | createStore() |
+|---|---|---|
+| Nature | Events — transient, fire and forget | State — persistent, readable at any time |
+| Use for | Notifications, actions, socket messages | Session data, domain lists, shared UI state |
+
+---
+
+# WebSocket SDK
+
+`atom-websdk` extends element with `WebRequestSdk` — a structured layer over WebSocket.
+
+## Interface address syntax
+
+| Separator | Type | Description |
+|---|---|---|
+| `host:::Name` | Receptive | Request → Response |
+| `host\|\|\|Name` | Expressive | Subscription / push |
+
+## Making requests
+
+```js
+const res = await Muffin.WebInterface.request(
+    '@host/app:::AgentService',
+    { subject: 'getDetails', params: { id: 'abc123' } },
+    { MAX_RESPONSE_TIME: 10000 }
+)
+```
+
+## Subscriptions
+
+```js
+await sdk.websubscribe('@host/app|||broadcast-event', 'global', 'broadcast-label')
+Muffin.PostOffice.sockets.global.on('broadcast-label', (msg) => { ... })
+```
+
+## Service pattern
+
+```js
+class AgentService extends Muffin.Service {
+    static name = 'AgentService'
+    static Interfaces = { Main: '@vritti/ideator:::AgentDevelopmentService' }
+
+    static async getDetails(id) {
+        const res = await Muffin.WebInterface.request(
+            this.Interfaces.Main,
+            { subject: 'getDetails', params: { slug: id } },
+            { MAX_RESPONSE_TIME: 10000 }
+        )
+        return res.result
+    }
+}
+```
+
+`Service` base provides TTL caching, interface locking (no duplicate in-flight requests), and subscription locking (no duplicate listeners).
+
+**Important:** Services are static-only. `this.interface` does not exist in static methods. To subscribe and forward to a consumer component, pass the consumer's interface name as a string:
+
+```js
+static subscribeToUpdates(consumerInterfaceName) {
+    Muffin.WebInterface.subscribe(this.Interfaces.Main, consumerInterfaceName, { subject: 'update' })
+}
+
+// in component onConnect():
+MyService.subscribeToUpdates(this.interface.name)
+this.interface.on('update', (msg) => { this.uiVars.data = msg })
+```
+
+---
+
+# API Reference — DOMComponent
+
+Base class for all muffin components. Extends `HTMLElement`.
+
+## Static properties
+
+| Property | Type | Description |
+|---|---|---|
+| `static domElName` | `string` | Custom element tag name. Required. |
+| `static markupFunc` | `function` | Returns HTML string. Called on every render. |
+| `static stateSpace` | `object` | State machine definition. |
+| `static derived` | `object` | Computed state. Functions of `(uiVars, data)`. |
+| `static schema` | `object` | Default shape for `_data`. |
+| `static styleMarkup` | `function` | Returns CSS string. |
+| `static advertiseAs` | `string` | PostOffice interface registration name. |
+
+## Instance properties (set in constructor)
+
+| Property | Type | Description |
+|---|---|---|
+| `this.uiVars.*` | `any` | Reactive local state. Any assignment triggers batched render. |
+| `this.stores` | `object` | Named stores. `{ key: storeInstance }`. Changes trigger re-render. |
+| `this.transitionSpace` | `object` | State transition hooks. `{ 'from <to> to': fn }`. |
+
+## markupFunc signature
+
+```js
+static markupFunc(_data, uid, uiVars, routeVars, _constructor, stores)
+```
+
+## Dynamic attributes on child components
+
+When a parent re-renders and changes an attribute on a child Muffin custom element, the child does **not** automatically re-render. There is no `observedAttributes` equivalent.
+
+**Pattern: inline rendering**
+
+```js
+// Instead of passing a changing attribute to a child (child won't update):
+`<lucide-icon icon="${uiVars.isPlaying ? 'pause' : 'play'}"></lucide-icon>`
+
+// Render inline — parent reconciler replaces output wholesale:
+`${LucideIcon.renderIcon(uiVars.isPlaying ? 'pause' : 'play', 20)}`
+```
+
+## composedScope
+
+`composedScope` is a named registry — nothing more. Children register themselves by key when they connect to the DOM. The parent accesses them by key to call methods.
+
+```js
+// child registers itself (automatic — via childscope attribute)
+// parent accesses:
+this.composedScope.sidebar.loadData()
+```
+
+Parent rendering does NOT affect child rendering. Each component has its own independent render cycle.
+
+---
+
+# API Reference — DOM Extensions
+
+Applied to every component automatically by `applyAtomWebSDK()`.
+
+## Element queries
+
+### `this.getElement(selector)`
+First matching element within the component's rendered DOM. Scoped — does not search the full document.
+
+```js
+postRender() {
+    const input = this.getElement('input[name="title"]')
+    input.focus()
+}
+```
+
+### `this.getElements(selector)`
+All matching elements as an array.
+
+**Prefer these over raw `querySelector`.** `_getDomNode()` is an internal method and not part of the public API.
+
+## UI helpers
+
+### `this.toggleBtnBusyState(btnEl, state?)`
+Add/remove `busy` class and `disabled` attribute on a button.
+
+### `this.toggleRootAttr(name, value?)`
+Toggle an attribute on the component root element. Passing `false` or a falsy value **removes** the attribute entirely.
+
+### `this.toggleSurface(surfaceName, state?, toggleClass?)`
+Show/hide a named `surface=""` element.
+
+### `this.awaitChildLoad(childscope, timeout?)`
+Returns a Promise that resolves when the named child component has rendered. Default timeout: 5000ms.
+
+```js
+async onConnect() {
+    await this.awaitChildLoad('detailPanel')
+    this.composedScope.detailPanel.loadData()
+}
+```
+
+### `this.initSubscriptions(subscriptions)`
+Batch-wire WebSocket subscriptions. Cleans up automatically on disconnect.
+
+### `this.callParent(srcEl, ev)`
+Invoke a method on the nearest ancestor component. Method name from `srcEl`'s `pass-method` attribute.
+
+---
+
+# API Reference — createStore()
+
+```js
+const store = Muffin.createStore(name, initialState, options?)
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `name` | `string` | Unique store name |
+| `initialState` | `object` | Initial state values |
+| `options.persist` | `boolean` | Persist to IndexedDB. Rehydrates on load. |
+| `options.socket` | `string` | PostOffice interface for socket sync |
+| `options.socketLabel` | `string` | Message label on that socket |
+
+Return value: `{ get(), set(partial), reset(), subscribe(fn) }`
+
+---
+
+# API Reference — Service
+
+Base class for SDK service layers. Always static — no instantiation.
+
+```js
+class MyService extends Muffin.Service {
+    static name = 'MyService'
+    static Interfaces = { Main: '@host/app:::ServiceInterface' }
+
+    static async getData(id) {
+        const res = await Muffin.WebInterface.request(
+            this.Interfaces.Main,
+            { subject: 'getData', params: { id } },
+            { MAX_RESPONSE_TIME: 10000 }
+        )
+        return res.result
+    }
+}
+```
+
+## Built-in behaviour
+
+```js
+static getCached(key)               // → value or null
+static setCached(key, value, ttl?)  // default ttl = 60s
+static clearCache(key)
+
+static async lockInterface(name, throttle?)     // prevent duplicate in-flight requests
+static unlockInterface(name)
+
+static async lockSubscription(name, throttle?)  // prevent duplicate listeners
+static unlockSubscription(name)
+```
+
+---
+
+# API Reference — PostOffice
+
+```js
+PostOffice.getOrCreateInterface(name, specs?)
+PostOffice.publishToInterface(name, message)
+PostOffice.addGlobalListener(name, handler)
+PostOffice.sockets.global.dispatchMessage(label, payload)
+```
+
+## PostOffice.Socket
+
+```js
+const socket = new Muffin.PostOffice.Socket({ url: 'wss://...', interfaceName: 'main' })
+socket.connect()
+```
+
+Auto-reconnects, keep-alive ping every 59s.
+
+---
+
+# API Reference — WebRequestSdk
+
+```js
+const sdk = new Muffin.WebRequestSdk(config)
+await sdk.connect()
+```
+
+| Method | Description |
+|---|---|
+| `connect()` | Open WebSocket. Auto-reconnects. |
+| `request(interface, message, opts?)` | Request → Response |
+| `websubscribe(interface, socket, label, opts?)` | Persistent subscription |
+| `communicate(message)` | Fire-and-forget |
+
+`Muffin.WebInterface` is the shared singleton initialized at app boot.
+
+---
+
+# Patterns — Muffin + Tailwind + Vite
+
+Standard project structure:
+
+```
+src/
+  components/
+    app-ui/app-ui.js
+    sidebar/sidebar.js
+    index.js          ← all .compose() calls
+  scripts/
+    1_touchpoint.js   ← CDN script load
+    2_utilities.js
+    3_app.js          ← Router, WebInterface, root component
+    4_polyfills.js    ← DOMComponent.prototype extensions
+  styles/main.css
+  main.js
+```
+
+`3_app.js` initializes Router, WebInterface, and the root component. `components/index.js` calls `.compose()` on every component. See full pattern in docs.
+
+---
+
+# Patterns — React + Muffin
+
+Muffin as WebSocket/service transport layer only, React owns the UI.
+
+```
+React component → hook → Service class (extends Muffin.Service) → Muffin.WebInterface → WebSocket
+```
+
+Load Muffin before React mounts, initialize `Muffin.WebInterface`, then use service classes from React hooks exactly as in muffin-only projects. No `DOMComponent` subclasses needed in the React layer.
+
+---
+
+# Migration — Upgrading to v3.0.0
+
+Key breaking changes from v2:
+
+1. **`Muffin.Service` is now built-in** — remove local `ElementWebService` polyfill
+2. **`uiVars` is now a reactive Proxy** — `render()` after assignments is optional but safe
+3. **DOM helper methods are built-in** — remove all `DOMComponent.prototype.*` assignments from polyfill files
+4. **Global utility extensions are built-in** — remove `Array.prototype.splitIntoMultipleArrays` and `String.prototype.ellipsify`
+5. **`window.Muffin` is the single namespace** — bare globals (`window.DOMComponent` etc.) removed
+
+New in v3: `createStore()`, `static derived`, `esc()` in markupFunc.
+
+---
+
+# Migration — Component Migration v2 → v3
+
+Key patterns:
+
+1. **Reactive uiVars** — assignment auto-schedules render; no need to call `render()` manually
+2. **Nested mutations** — always replace the top-level key, never mutate nested properties in-place
+3. **`renderSelectively()`** — no-op without `data-uivar` nodes; remove dead calls
+4. **Non-template state** — move DOM refs and intermediate values to plain instance properties
+5. **`childscope`** — required for stateful children to survive parent re-renders
+6. **`getParent()` timing** — only valid in `onConnect()` or `postRender()`, not constructor
+7. **No Shadow DOM** — do not call `attachShadow()`
+
+---
+
+# Known Issues
+
+Real-world issues from projects using Muffin. Includes resolved items for reference.
+
+| # | Area | Issue | Workaround | Status |
+|---|------|--------|------------|--------|
+| 1 | Event binding | `on-keydown`, `on-focus`, `on-blur`, `on-dblclick` were missing from supported `on-*` attribute list. | Bind imperatively via `addEventListener`. | Resolved in atom-websdk 3.1.5 |
+| 2 | Service static `this.interface` | `this.interface` is `undefined` in static service methods. | Pass consumer interface name as string to `Muffin.WebInterface.subscribe()`. See Service docs. | Not a bug — expected JS behaviour. Documented. |
+| 3 | Child component attribute reactivity | Changing an attribute on a child Muffin component from the parent does not trigger child re-render. No `observedAttributes` equivalent. | Render dynamic output inline in the parent template. See DOMComponent docs. | Architectural limitation — documented. |
+| 4 | Store subscriptions not firing | `this.stores` declared in constructor did not register reactive subscriptions. `_subscribeToStores()` ran before subclass constructor assigned `this.stores`. | `store.subscribe(() => this.render())` in `onConnect()`. | Resolved in element 0.9.3 / atom-websdk 3.1.6 |
+| 5 | `composedScope` after `switchState` | Children in new state markup not yet in `composedScope` synchronously after `switchState`. | Use `await this.awaitChildLoad('key')` — deterministic, event-driven. | Architectural behaviour — documented. |
+| 6 | Boolean attribute removal on re-render | Boolean attributes (`disabled`, `readonly`) set via template expression not removed when condition flips. DOM patcher only calls `setAttribute`, never `removeAttribute`. | Manage toggling boolean attributes imperatively in `postRender`. | Confirmed bug — fix pending. |
+| 7 | `on-load` for cached resources | Handler attached too late for cached images — `load` fires synchronously during DOM insertion before event binder runs. | `addEventListener('load', handler, { once: true })` imperatively; check `el.complete` first. | Confirmed timing bug — fix pending. |
+| 8 | `getElement` / `getElements` undiscoverable | Methods existed but were not in public API docs. Developers fell back to `_getDomNode().querySelector()`. | Use `this.getElement(selector)` and `this.getElements(selector)`. `_getDomNode()` is internal. | Docs gap — resolved. |

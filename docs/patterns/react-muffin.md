@@ -35,7 +35,7 @@ createRoot(document.getElementById('root')!).render(<App />)
 export async function loadAtomWebSDK() {
     // Load sdk.min.js from CDN if not already loaded
     if (window.Muffin) return
-    await loadScript('https://cdn.footloose.io/atom-websdk/2.0.6/sdk.min.js')
+    await loadScript('https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.1.7/dist/sdk.min.js')
     Muffin.WebInterface = new Muffin.WebRequestSdk({ label: 'sandbox' })
     await Muffin.WebInterface.connect()
 }

@@ -24,7 +24,43 @@ class MyService extends Muffin.Service {
 const data = await MyService.getData('abc')
 ```
 
-Services are static classes — no instantiation.
+Services are static classes — no instantiation. There is no `this.interface` in a service; `this` in a static method refers to the class itself, not a component instance.
+
+## Subscribing from a static service
+
+Because services have no component instance, there is no `this.interface` to dispatch or subscribe on. To subscribe to a WebSocket message and forward it to a consumer component, pass the consumer's interface name directly to `Muffin.WebInterface.subscribe()`:
+
+```js
+class WalletService extends Muffin.Service {
+    static name = 'WalletService'
+
+    static Interfaces = {
+        Main: '@host/app:::WalletService'
+    }
+
+    // Called once from the consumer component's onConnect()
+    static subscribeToBalance(consumerInterfaceName) {
+        Muffin.WebInterface.subscribe(
+            this.Interfaces.Main,
+            consumerInterfaceName,   // ← consumer's interface name as a string
+            { subject: 'balance-update' }
+        )
+    }
+}
+```
+
+The consumer component then listens on its own interface:
+
+```js
+async onConnect() {
+    WalletService.subscribeToBalance(this.interface.name)
+    this.interface.on('balance-update', (msg) => {
+        this.uiVars.balance = msg.balance
+    })
+}
+```
+
+`this.interface` is only available on **component instances**, never inside static service methods.
 
 ## Built-in behaviour
 

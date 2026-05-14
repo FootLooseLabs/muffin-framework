@@ -11,7 +11,7 @@ export default defineConfig({
             { text: 'API', link: '/api/dom-component' },
             { text: 'Patterns', link: '/patterns/muffin-only' },
             { text: 'Migration', link: '/migration/v3' },
-            { text: 'llms.txt', link: '/llms.txt' }
+            { text: 'llms.txt', link: 'llms.txt' }
         ],
 
         sidebar: [

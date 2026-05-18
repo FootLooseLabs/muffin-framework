@@ -43,7 +43,8 @@ export default defineConfig({
                 text: 'Patterns',
                 items: [
                     { text: 'Muffin + Tailwind + Vite', link: '/patterns/muffin-only' },
-                    { text: 'React + Muffin', link: '/patterns/react-muffin' }
+                    { text: 'React + Muffin', link: '/patterns/react-muffin' },
+                    { text: 'Managing Services Across Projects', link: '/patterns/service-monorepo' }
                 ]
             },
             {

@@ -753,6 +753,43 @@ Move a service in when it appears in more than one project with minimal divergen
 
 ---
 
+# CLI — muf
+
+Install: `npm install -g github:FootLooseLabs/muffin-cli`
+
+## muf components
+
+```sh
+muf components list                                      # list all components
+muf components search <query>                            # search by name/tag
+muf components info <name>                               # show manifest
+muf components add <name>                                # copy to ./src/components
+muf components add <name> --dir ./src/components/utils  # custom dir
+```
+
+## muf templates
+
+```sh
+muf templates list
+muf templates search <query>
+muf templates init <name>                    # scaffold to ./src
+muf templates init <name> --dir ./src/pages  # custom dir
+```
+
+## muf services
+
+Requires `.mufrc.json` with a services registry configured.
+
+```sh
+muf services list                            # list available services
+muf services list --search <query>           # filter inline
+muf services search <query>                  # search by name/tag
+muf services add <name>                      # ts → src/muffin-services/, vanilla → src/web-services/
+muf services add <name> --dir ./src/services # custom dir
+```
+
+---
+
 # CLI — .mufrc.json (Private Registries)
 
 `muf` supports private org registries for components, templates, and services alongside the public FootLooseLabs registries. Place `.mufrc.json` in your project root (or any ancestor — `muf` walks up from cwd).

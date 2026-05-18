@@ -52,7 +52,8 @@ export default defineConfig({
             {
                 text: 'CLI',
                 items: [
-                    { text: '.mufrc.json (Private Registries)', link: '/cli/mufrc' }
+                    { text: '.mufrc.json (Private Registries)', link: '/cli/mufrc' },
+                    { text: 'Setting Up a Private Registry', link: '/cli/private-registry-setup' }
                 ]
             },
             {

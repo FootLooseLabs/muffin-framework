@@ -64,7 +64,7 @@ export default YourComponentName
 }
 ```
 
-`muf add your-component-name` fetches `components/your-component-name/index.js` from this repo and copies it into the project.
+`muf components add your-component-name` fetches `components/your-component-name/index.js` from this repo and copies it into the project.
 
 ---
 
@@ -128,7 +128,7 @@ your-templates-registry/
 }
 ```
 
-`muf init your-template-name` fetches each file listed in `files` and copies them into the project.
+`muf templates init your-template-name` fetches each file listed in `files` and copies them into the project.
 
 ---
 

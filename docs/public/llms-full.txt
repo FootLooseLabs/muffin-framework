@@ -745,7 +745,7 @@ muf services add account-management         # → src/web-services/account-manag
 muf services add AccountManagementService --dir ./src/services   # custom dir
 ```
 
-Works exactly like `muf add` for components — the service file is copied into the project. Run again to update to the latest version.
+Works exactly like `muf components add` — the service file is copied into the project. Run again to update to the latest version.
 
 ## What belongs in the monorepo
 

@@ -33,11 +33,11 @@ Commit this file — other developers on the project won't need to configure any
 
 Point to any `registry.json` that follows the same shape as the public registries. Private entries are merged with the public registry — private wins on name collision.
 
-After adding this, `muf list`, `muf search`, and `muf add` include your private components transparently — no extra flags needed.
+After adding this, `muf components list`, `muf components search`, and `muf components add` include your private components transparently — no extra flags needed.
 
 ## Services
 
-`muf services add` copies the service source file directly into the project — same model as `muf add` for components. No vite alias or path config needed.
+`muf services add` copies the service source file directly into the project — same model as `muf components add`. No vite alias or path config needed.
 
 | Field | Required | Description |
 |-------|----------|-------------|
@@ -67,10 +67,11 @@ export GITHUB_TOKEN=ghp_...
 
 | Command | Public registry | Private registries |
 |---------|----------------|-------------------|
-| `muf list` | FootLooseLabs/muffin-components | merged in |
-| `muf list --templates` | FootLooseLabs/muffin-templates | merged in |
-| `muf search <q>` | FootLooseLabs/muffin-components | merged in |
-| `muf add <name>` | copies source from public repo | copies source from private repo |
+| `muf components list` | FootLooseLabs/muffin-components | merged in |
+| `muf components search <q>` | FootLooseLabs/muffin-components | merged in |
+| `muf components add <name>` | copies source from public repo | copies source from private repo |
+| `muf templates list` | FootLooseLabs/muffin-templates | merged in |
+| `muf templates init <name>` | copies source from public repo | copies source from private repo |
 | `muf services list` | — | reads configured services registries |
 | `muf services search <q>` | — | reads configured services registries |
 | `muf services add <name>` | — | copies service file into project |

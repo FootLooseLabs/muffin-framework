@@ -52,10 +52,44 @@ Project-specific services stay in the project under `src/web-services/` (vanilla
 
 ## Consuming from the monorepo
 
-The simplest approach with no tooling overhead is **path aliases** configured in each project's `vite.config.js`:
+The recommended approach is to configure a `.mufrc.json` in each project and use `muf services add` to wire up the alias and get the import line.
+
+### 1. Add `.mufrc.json` to the project root
+
+```json
+{
+  "registries": {
+    "services": [
+      {
+        "url": "https://raw.githubusercontent.com/your-org/your-services/main/packages/services-ts/registry.json",
+        "stack": "ts",
+        "alias": "@org-services",
+        "path": "../../your-org-services/packages/services-ts"
+      }
+    ]
+  }
+}
+```
+
+For private repos set `GITHUB_TOKEN` in the environment — `muf` picks it up automatically.
+
+### 2. Use `muf services add`
+
+```sh
+muf services add AccountManagementService
+```
+
+This checks for the vite alias and tsconfig paths — prints the exact snippet to add if either is missing — then prints the import line:
+
+```ts
+import AccountManagementService from '@org-services/AccountManagementService'
+```
+
+### Manual setup (no CLI)
+
+If you prefer to configure manually, add the alias in `vite.config.js`:
 
 ```js
-// vite.config.js
 import path from 'path'
 
 export default {
@@ -68,11 +102,10 @@ export default {
 ```
 
 ```js
-// in any component or service
 import AccountManager from '@org-services/account-management'
 ```
 
-For TS projects, add the alias in `tsconfig.json` as well:
+For TS projects, also add to `tsconfig.json`:
 
 ```json
 {
@@ -83,6 +116,29 @@ For TS projects, add the alias in `tsconfig.json` as well:
   }
 }
 ```
+
+## Services registry
+
+For `muf services list` and `muf services add` to work, each package in the monorepo needs a `registry.json`:
+
+```json
+{
+  "services": {
+    "AccountManagementService": {
+      "description": "Account info, session props, wallet, subscriptions",
+      "stack": "ts",
+      "tags": ["account", "wallet", "subscriptions"]
+    },
+    "FileUploaderService": {
+      "description": "Signed URL upload, tracking, status, cleanup",
+      "stack": "ts",
+      "tags": ["upload", "files"]
+    }
+  }
+}
+```
+
+This is the only file `muf` reads from the services repo — the actual service files are never fetched by the CLI, only referenced via the vite alias.
 
 ## Naming convention
 

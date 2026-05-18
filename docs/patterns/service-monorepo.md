@@ -63,11 +63,11 @@ Works exactly like `muf add` for components — `muf services add` fetches the s
   "registries": {
     "services": [
       {
-        "url": "https://raw.githubusercontent.com/your-org/your-services/main/packages/services-ts/registry.json",
+        "url": "https://raw.githubusercontent.com/your-org/your-services-registry/main/packages/services-ts/registry.json",
         "stack": "ts"
       },
       {
-        "url": "https://raw.githubusercontent.com/your-org/your-services/main/packages/services-vanilla/registry.json",
+        "url": "https://raw.githubusercontent.com/your-org/your-services-registry/main/packages/services-vanilla/registry.json",
         "stack": "vanilla"
       }
     ]

@@ -8,18 +8,18 @@
 {
   "registries": {
     "components": [
-      "https://raw.githubusercontent.com/your-org/your-components/main/registry.json"
+      "https://raw.githubusercontent.com/your-org/your-components-registry/main/registry.json"
     ],
     "templates": [
-      "https://raw.githubusercontent.com/your-org/your-templates/main/registry.json"
+      "https://raw.githubusercontent.com/your-org/your-templates-registry/main/registry.json"
     ],
     "services": [
       {
-        "url": "https://raw.githubusercontent.com/your-org/your-services/main/packages/services-ts/registry.json",
+        "url": "https://raw.githubusercontent.com/your-org/your-services-registry/main/packages/services-ts/registry.json",
         "stack": "ts"
       },
       {
-        "url": "https://raw.githubusercontent.com/your-org/your-services/main/packages/services-vanilla/registry.json",
+        "url": "https://raw.githubusercontent.com/your-org/your-services-registry/main/packages/services-vanilla/registry.json",
         "stack": "vanilla"
       }
     ]

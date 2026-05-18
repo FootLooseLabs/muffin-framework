@@ -8,7 +8,7 @@ UI component framework and ecosystem by [FootLoose Labs](https://github.com/Foot
 
 | Repo | Description |
 |------|-------------|
-| [muffin-framework](https://github.com/FootLooseLabs/muffin-framework) | This repo — framework docs, patterns, migration guides |
+| [muffin-framework](https://github.com/FootLooseLabs/muffin-framework) | This repo — framework docs, patterns, migration guides. Docs site: [footlooselabs.github.io/muffin-framework](https://footlooselabs.github.io/muffin-framework/) |
 | [element](https://github.com/FootLooseLabs/element) | Core library — `Muffin.DOMComponent`, stores, PostOffice, state machine |
 | [atom-websdk](https://github.com/FootLooseLabs/atom-websdk) | WebSocket SDK and service base class (`ElementWebService`) |
 | [muffin-cli](https://github.com/FootLooseLabs/muffin-cli) | CLI — browse, add components, scaffold templates, manage org services |

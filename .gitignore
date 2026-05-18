@@ -6,3 +6,6 @@ docs/.vitepress/cache
 docs/chat-logs/
 element-pacakge-manager/
 issues/
+muffin-cli/
+muffin-components/
+muffin-templates/

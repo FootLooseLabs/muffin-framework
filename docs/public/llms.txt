@@ -9,6 +9,12 @@ Both ship as a single CDN bundle (`sdk.min.js`). After loading, everything is av
 Current stable version: atom-websdk 3.1.7 / element 0.9.3
 CDN: https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.1.7/dist/sdk.min.js
 
+## Stack-specific context files
+
+For AI agents working inside a project, use the stack-specific file instead of llms-full.txt:
+- `llms-vanilla.txt` — vanilla Muffin projects (plain JS, Muffin.Service, src/web-services/)
+- `llms-ts.txt` — React + Muffin projects (TypeScript, ElementWebService, WebInterfaceProvider, src/muffin-services/)
+
 ---
 
 ## Documentation pages
@@ -33,7 +39,7 @@ CDN: https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.1.7/dist/sdk.min.js
 ### Patterns
 - [Muffin + Tailwind + Vite](/patterns/muffin-only) — project structure, 3_app.js, component and service example
 - [React + Muffin](/patterns/react-muffin) — Muffin as WebSocket/service layer only, React owns UI, service classes from hooks
-- [Managing Services Across Projects](/patterns/service-monorepo) — private services monorepo for orgs, registry.json, muf services add, vite alias pattern
+- [Managing Services Across Projects](/patterns/service-monorepo) — private services monorepo for orgs, registry.json, muf services add copies files into project
 
 ### CLI
 - [.mufrc.json (Private Registries)](/cli/mufrc) — config file for private component, template, and services registries; GITHUB_TOKEN; per-command behaviour

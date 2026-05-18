@@ -52,7 +52,7 @@ Project-specific services stay in the project under `src/web-services/` (vanilla
 
 ## Consuming from the monorepo
 
-The recommended approach is to configure a `.mufrc.json` in each project and use `muf services add` to wire up the alias and get the import line.
+The recommended approach is to configure a `.mufrc.json` in each project and use `muf services add` to wire up the alias and get the import line. See [`.mufrc.json` — Private Registries](/cli/mufrc) for the full config reference.
 
 ### 1. Add `.mufrc.json` to the project root
 

@@ -48,6 +48,12 @@ export default defineConfig({
                 ]
             },
             {
+                text: 'CLI',
+                items: [
+                    { text: '.mufrc.json (Private Registries)', link: '/cli/mufrc' }
+                ]
+            },
+            {
                 text: 'Migration',
                 items: [
                     { text: 'Upgrading to v3.0.0', link: '/migration/v3' },

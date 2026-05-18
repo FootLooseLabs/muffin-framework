@@ -16,63 +16,42 @@
     "services": [
       {
         "url": "https://raw.githubusercontent.com/your-org/your-services/main/packages/services-ts/registry.json",
-        "stack": "ts",
-        "alias": "@org-services",
-        "path": "../../your-services/packages/services-ts"
+        "stack": "ts"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/your-org/your-services/main/packages/services-vanilla/registry.json",
+        "stack": "vanilla"
       }
     ]
   }
 }
 ```
+
+Commit this file — other developers on the project won't need to configure anything.
 
 ## Components and templates
 
 Point to any `registry.json` that follows the same shape as the public registries. Private entries are merged with the public registry — private wins on name collision.
 
-```json
-{
-  "registries": {
-    "components": [
-      "https://raw.githubusercontent.com/your-org/your-components/main/registry.json"
-    ]
-  }
-}
-```
-
 After adding this, `muf list`, `muf search`, and `muf add` include your private components transparently — no extra flags needed.
 
 ## Services
 
-Services have a richer config object because `muf services add` also needs to know how to wire the vite alias:
+`muf services add` copies the service source file directly into the project — same model as `muf add` for components. No vite alias or path config needed.
 
 | Field | Required | Description |
 |-------|----------|-------------|
 | `url` | yes | URL to the `registry.json` in your services repo |
-| `stack` | no | `"ts"` or `"vanilla"` — shown in `muf services list` output |
-| `alias` | no | Import alias to use (default: `@hais-services`) |
-| `path` | no | Relative path for vite alias (used in the snippet `muf services add` prints) |
+| `stack` | no | `"ts"` → copies to `src/muffin-services/`, `"vanilla"` → `src/web-services/` |
 | `token` | no | Auth token for this registry — prefer `GITHUB_TOKEN` env var instead |
 
-```json
-{
-  "registries": {
-    "services": [
-      {
-        "url": "https://raw.githubusercontent.com/your-org/your-services/main/packages/services-ts/registry.json",
-        "stack": "ts",
-        "alias": "@org-services",
-        "path": "../../your-services/packages/services-ts"
-      },
-      {
-        "url": "https://raw.githubusercontent.com/your-org/your-services/main/packages/services-vanilla/registry.json",
-        "stack": "vanilla",
-        "alias": "@org-services-vanilla",
-        "path": "../../your-services/packages/services-vanilla"
-      }
-    ]
-  }
-}
+```sh
+muf services add AccountManagementService          # → src/muffin-services/AccountManagementService.ts
+muf services add account-management               # → src/web-services/account-management.js
+muf services add AccountManagementService --dir ./src/services   # custom dir
 ```
+
+To update a service to the latest version, just run `muf services add` again — it overwrites the file.
 
 ## Private GitHub repos
 
@@ -91,7 +70,7 @@ export GITHUB_TOKEN=ghp_...
 | `muf list` | FootLooseLabs/muffin-components | merged in |
 | `muf list --templates` | FootLooseLabs/muffin-templates | merged in |
 | `muf search <q>` | FootLooseLabs/muffin-components | merged in |
-| `muf add <name>` | fetches source from public repo | fetches source from private repo |
+| `muf add <name>` | copies source from public repo | copies source from private repo |
 | `muf services list` | — | reads configured services registries |
 | `muf services search <q>` | — | reads configured services registries |
-| `muf services add <name>` | — | checks vite alias, prints import line |
+| `muf services add <name>` | — | copies service file into project |

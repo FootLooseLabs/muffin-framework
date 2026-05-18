@@ -804,6 +804,110 @@ Private entries are merged with the public registry — private wins on name col
 
 ---
 
+# CLI — Setting Up a Private Registry
+
+Three registry types are supported. Each is a GitHub repo with a specific structure.
+
+## Components registry
+
+```
+your-components-registry/
+  components/
+    your-component-name/
+      index.js
+  registry.json
+```
+
+`registry.json`:
+```json
+{
+  "components": {
+    "your-component-name": {
+      "domElName": "your-component-name",
+      "description": "One-line description",
+      "extends": "Muffin.DOMComponent",
+      "source": "components/your-component-name/index.js",
+      "tags": ["tag1", "tag2"]
+    }
+  }
+}
+```
+
+## Templates registry
+
+```
+your-templates-registry/
+  templates/
+    your-template-name/
+      template.json
+      index.js
+      hero.js
+  registry.json
+```
+
+`registry.json`:
+```json
+{
+  "templates": {
+    "your-template-name": {
+      "description": "One-line description",
+      "tags": ["landing"],
+      "files": ["index.js", "hero.js"],
+      "components": ["lucide-icon"],
+      "slots": ["headline", "cta-label"]
+    }
+  }
+}
+```
+
+## Services registry
+
+```
+your-services-registry/
+  packages/
+    services-ts/
+      AccountManagementService.ts
+      registry.json
+    services-vanilla/
+      account-management.js
+      registry.json
+    sdk/
+      WebInterfaceProvider.ts
+```
+
+`registry.json` (services-ts):
+```json
+{
+  "services": {
+    "AccountManagementService": {
+      "description": "Account info, session props, wallet, subscriptions",
+      "stack": "ts",
+      "tags": ["account", "wallet"]
+    }
+  }
+}
+```
+
+`registry.json` (services-vanilla) — `file` field required since filename isn't inferrable from key:
+```json
+{
+  "services": {
+    "account-management": {
+      "description": "Account info, session props, wallet, subscriptions",
+      "stack": "vanilla",
+      "file": "account-management.js",
+      "tags": ["account", "wallet"]
+    }
+  }
+}
+```
+
+## Private repo access
+
+Set `GITHUB_TOKEN` in the environment. `muf` passes it as a Bearer token on every fetch — registry index and source files. Add to CI as a secret for the same effect.
+
+---
+
 # Migration — Upgrading to v3.0.0
 
 Key breaking changes from v2:

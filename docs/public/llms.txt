@@ -43,6 +43,7 @@ For AI agents working inside a project, use the stack-specific file instead of l
 
 ### CLI
 - [.mufrc.json (Private Registries)](/cli/mufrc) — config file for private component, template, and services registries; GITHUB_TOKEN; per-command behaviour
+- [Setting Up a Private Registry](/cli/private-registry-setup) — required folder/file structure for components-registry, templates-registry, and services-registry repos; registry.json format for each type
 
 ### Migration
 - [Upgrading to v3.0.0](/migration/v3) — breaking changes from v2, new createStore/derived/esc features, upgrade checklist

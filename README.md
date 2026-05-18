@@ -37,10 +37,10 @@ UI component framework and ecosystem by [FootLoose Labs](https://github.com/Foot
 npm install -g github:FootLooseLabs/muffin-cli
 
 # Add a component
-muf add lucide-icon
+muf components add lucide-icon
 
 # Scaffold a template
-muf init saas-landing-page
+muf templates init saas-landing-page
 
 # Org services (requires .mufrc.json)
 muf services list

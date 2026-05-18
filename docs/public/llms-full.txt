@@ -796,9 +796,11 @@ Private entries are merged with the public registry — private wins on name col
 
 | Command | Public registry | Private registries |
 |---------|----------------|-------------------|
-| `muf list` | FootLooseLabs/muffin-components | merged in |
-| `muf list --templates` | FootLooseLabs/muffin-templates | merged in |
-| `muf add <name>` | copies source from public repo | copies source from private repo |
+| `muf components list` | FootLooseLabs/muffin-components | merged in |
+| `muf components search <q>` | FootLooseLabs/muffin-components | merged in |
+| `muf components add <name>` | copies source from public repo | copies source from private repo |
+| `muf templates list` | FootLooseLabs/muffin-templates | merged in |
+| `muf templates init <name>` | copies source from public repo | copies source from private repo |
 | `muf services list` | — | reads configured services registries |
 | `muf services add <name>` | — | copies service file into project |
 

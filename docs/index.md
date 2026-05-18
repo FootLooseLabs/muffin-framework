@@ -24,4 +24,6 @@ features:
 
 > For AI agents and coding assistants:
 > [llms.txt](https://footlooselabs.github.io/muffin-framework/llms.txt) ·
-> [llms-full.txt](https://footlooselabs.github.io/muffin-framework/llms-full.txt)
+> [llms-full.txt](https://footlooselabs.github.io/muffin-framework/llms-full.txt) ·
+> [llms-vanilla.txt](https://footlooselabs.github.io/muffin-framework/llms-vanilla.txt) ·
+> [llms-ts.txt](https://footlooselabs.github.io/muffin-framework/llms-ts.txt)

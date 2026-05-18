@@ -4,6 +4,9 @@ export default defineConfig({
     title: 'Muffin Framework',
     description: 'element + atom-websdk — Footloose Labs internal framework',
     base: '/muffin-framework/',
+    head: [
+        ['link', { rel: 'icon', href: 'https://avatars.githubusercontent.com/u/62698328?s=200&v=4' }]
+    ],
 
     themeConfig: {
         nav: [

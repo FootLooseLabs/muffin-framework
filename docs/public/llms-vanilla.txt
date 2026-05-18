@@ -1,0 +1,250 @@
+# Muffin Framework — Vanilla Project Context
+
+Working knowledge for a vanilla Muffin project (plain JS, no React). For full framework reference see llms-full.txt.
+
+Framework: element + atom-websdk, loaded via CDN as `window.Muffin`.
+CDN: https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.1.7/dist/sdk.min.js
+
+---
+
+## Project structure
+
+```
+src/
+  components/
+    app-ui/app-ui.js
+    sidebar/sidebar.js
+    index.js              ← all .compose() calls
+  scripts/
+    1_touchpoint.js       ← CDN script load
+    2_utilities.js
+    3_app.js              ← Router, WebInterface, root component init
+    4_polyfills.js        ← DOMComponent.prototype extensions
+  web-services/           ← project-specific services (Muffin.Service)
+  styles/main.css
+  main.js
+index.html
+vite.config.js
+package.json
+```
+
+## Entry point (3_app.js)
+
+```js
+Muffin._router = new Muffin.Router({ routeDelimiter: '?', basePath: '/tools/my-tool/' })
+Muffin._router.addRouteConfig([
+    { name: 'home', defaultRoute: true },
+    { name: 'detail' }
+])
+
+Muffin.WebInterface = new Muffin.WebRequestSdk({ label: 'sandbox' })
+Muffin.WebInterface.connect()
+```
+
+## Component pattern
+
+```js
+class AgentCard extends Muffin.DOMComponent {
+    static domElName = 'agent-card'
+    static parent = 'app-content'
+    static childscope = 'agentCard'
+
+    static markupFunc(_data, uid, uiVars) {
+        return `
+            <div class="p-4 rounded-lg">
+                <h3>${uiVars.name}</h3>
+                <p render-if="uiVars.loading">Loading…</p>
+                <div render-if="!uiVars.loading">
+                    <p>${uiVars.description}</p>
+                    <button on-click="handleEdit">Edit</button>
+                </div>
+            </div>
+        `
+    }
+
+    constructor() {
+        super()
+        this.uiVars.name = ''
+        this.uiVars.description = ''
+        this.uiVars.loading = true
+    }
+
+    async onConnect() {
+        const data = await AgentService.getDetails(this._data.id)
+        this.uiVars.name = data.name
+        this.uiVars.description = data.description
+        this.uiVars.loading = false
+    }
+
+    handleEdit(srcEl, ev) {
+        this.callParent(srcEl, ev)
+    }
+}
+
+AgentCard.compose()
+```
+
+## Service pattern
+
+Services extend `Muffin.Service`. Always static — no instantiation. Use `Muffin.WebInterface.request()` directly.
+
+```js
+export default class AgentService extends Muffin.Service {
+    static name = 'AgentService'
+
+    static Interfaces = {
+        Dev: '@vritti/ideator:::AgentDevelopmentService'
+    }
+
+    static async getDetails(slug) {
+        const cacheKey = `agent-${slug}`
+        const cached = this.getCached(cacheKey)
+        if (cached) return cached
+
+        await this.lockInterface('Dev')
+        try {
+            const res = await Muffin.WebInterface.request(
+                this.Interfaces.Dev,
+                { subject: 'getDetails', params: { slug } },
+                { MAX_RESPONSE_TIME: 10000 }
+            )
+            const result = res.result
+            this.setCached(cacheKey, result, 60 * 1000)
+            return result
+        } catch (e) {
+            throw new Error(e?.error || 'Failed to get agent details')
+        } finally {
+            this.unlockInterface('Dev')
+        }
+    }
+}
+```
+
+## Service base class built-ins
+
+```js
+this.getCached(key)                  // → value or null
+this.setCached(key, value, ttlMs)    // default 60s
+this.clearCache(key?)                // clears one key or all
+
+await this.lockInterface(name)       // prevents duplicate in-flight requests
+this.unlockInterface(name)
+
+await this.lockSubscription(name)    // prevents duplicate listeners
+this.unlockSubscription(name)
+```
+
+## WebInterface request syntax
+
+```js
+// Receptive (request → response)
+const res = await Muffin.WebInterface.request(
+    '@host/app:::ServiceName',
+    { subject: 'methodName', object: { ...payload }, params: {} },
+    { MAX_RESPONSE_TIME: 10000 }
+)
+return res.result
+
+// Expressive (subscription / push)
+await Muffin.WebInterface.websubscribe('@host/app|||EventName', 'global', 'event-label')
+Muffin.PostOffice.sockets.global.on('event-label', (msg) => { ... })
+```
+
+## Service naming convention
+
+| File | Class |
+|------|-------|
+| `account-management.js` | `AccountManager` or `AccountManagementService` |
+| `agent-search-service.js` | `AgentSearchService` |
+| kebab-case | PascalCase |
+
+Project-specific services live in `src/web-services/`. Shared org services are added via `muf services add`.
+
+---
+
+## Shared org services (hais-services)
+
+Add `.mufrc.json` to the project root:
+
+```json
+{
+  "registries": {
+    "services": [
+      {
+        "url": "https://raw.githubusercontent.com/Vritti-ai/hais-services/main/packages/services-vanilla/registry.json",
+        "stack": "vanilla"
+      }
+    ]
+  }
+}
+```
+
+Then:
+
+```sh
+muf services list                   # see available services
+muf services add account-management # copies to src/web-services/account-management.js
+```
+
+Import directly after adding:
+
+```js
+import AccountManager from './web-services/account-management.js'
+```
+
+Run `muf services add` again to update to the latest version.
+
+### Available shared services (services-vanilla)
+
+| Service | File | Description |
+|---------|------|-------------|
+| account-management | account-management.js | Account info, session props, wallet, subscriptions, transactions |
+| agent-developer-service | agent-developer-service.js | Agent development and configuration |
+| agent-search-service | agent-search-service.js | Agent search and discovery |
+| agents-search-service | agents-search-service.js | Agents search (wity-app variant) |
+| ai-suggestion-service | ai-suggestion-service.js | AI-powered suggestion generation |
+| artefact-manager-service | artefact-manager-service.js | Artefact creation and management |
+| board-management-service | board-management-service.js | Board structure and management |
+| collaboration-service | collaboration-service.js | Collaboration and sharing |
+| composition-manager-service | composition-manager-service.js | Composition management |
+| composition-module-developer-service | composition-module-developer-service.js | Composition module development |
+| directives-management-service | directives-management-service.js | Directives management |
+| engine-developer-service | engine-developer-service.js | Engine development and configuration |
+| file-uploader | file-uploader.js | Signed URL upload utilities |
+| folder-organizer-service | folder-organizer-service.js | Folder organisation |
+| licensing-service | licensing-service.js | License management |
+| memory-management-service | memory-management-service.js | Memory and context management |
+| morphogen-developer-service | morphogen-developer-service.js | Morphogen development |
+| resource-sharing-service | resource-sharing-service.js | Resource access and sharing |
+| thought-management-service | thought-management-service.js | Thought capture and management |
+
+---
+
+## Key patterns and gotchas
+
+**Reactive state is shallow** — never mutate nested properties directly:
+```js
+// wrong
+this.uiVars.user.name = 'Ankur'
+// correct
+this.uiVars.user = { ...this.uiVars.user, name: 'Ankur' }
+```
+
+**Child components after switchState** — not in DOM synchronously:
+```js
+this.switchState('loaded')
+await this.awaitChildLoad('detailPanel')  // wait for child to mount
+this.composedScope.detailPanel.loadData()
+```
+
+**Services are static-only** — `this.interface` does not exist in service methods. To subscribe and forward to a component, pass the component's interface name as a string:
+```js
+static subscribeToUpdates(consumerInterfaceName) {
+    Muffin.WebInterface.subscribe(this.Interfaces.Main, consumerInterfaceName, { subject: 'update' })
+}
+// in component onConnect():
+MyService.subscribeToUpdates(this.interface.name)
+this.interface.on('update', (msg) => { this.uiVars.data = msg })
+```
+
+**Dynamic child attributes don't re-render the child** — render dynamic output inline in the parent template instead of passing changing attributes to child components.

@@ -12,7 +12,9 @@ export default defineConfig({
             { text: 'Patterns', link: '/patterns/muffin-only' },
             { text: 'Migration', link: '/migration/v3' },
             { text: 'llms.txt', link: '/muffin-framework/llms.txt' },
-            { text: 'llms-full.txt', link: '/muffin-framework/llms-full.txt' }
+            { text: 'llms-full.txt', link: '/muffin-framework/llms-full.txt' },
+            { text: 'llms-vanilla.txt', link: '/muffin-framework/llms-vanilla.txt' },
+            { text: 'llms-ts.txt', link: '/muffin-framework/llms-ts.txt' }
         ],
 
         sidebar: [

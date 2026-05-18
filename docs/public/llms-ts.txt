@@ -1,0 +1,289 @@
+# Muffin Framework — React + Muffin (TS) Project Context
+
+Working knowledge for a React + Muffin project (TypeScript, React UI, Muffin as WebSocket/service layer). For full framework reference see llms-full.txt.
+
+Framework: element + atom-websdk loaded via CDN. React owns the UI. Muffin owns WebSocket transport and the service layer.
+
+---
+
+## Project structure
+
+```
+src/
+  components/           ← React components
+  hooks/                ← React hooks (useEntityManager, useAssets, etc.)
+  muffin-services/      ← shared org services (copied via muf services add)
+  web-services/         ← project-specific services
+  muffin-sdk/
+    index.ts            ← loadAtomWebSDK(), getMuffin()
+    muffin.d.ts         ← window.Muffin type declarations
+  stores/               ← React state (zustand or similar)
+  main.tsx              ← await loadAtomWebSDK() before React mounts
+vite.config.ts
+tsconfig.json
+.mufrc.json             ← private registry config
+```
+
+## Boot sequence (main.tsx)
+
+Muffin must be loaded and connected before React mounts:
+
+```ts
+import { loadAtomWebSDK } from './muffin-sdk'
+
+await loadAtomWebSDK()
+
+import { createRoot } from 'react-dom/client'
+import App from './App'
+createRoot(document.getElementById('root')!).render(<App />)
+```
+
+```ts
+// src/muffin-sdk/index.ts
+export async function loadAtomWebSDK() {
+    if (window.Muffin) return
+    await loadScript('https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.1.7/dist/sdk.min.js')
+    Muffin.WebInterface = new Muffin.WebRequestSdk({ label: 'sandbox' })
+    await Muffin.WebInterface.connect()
+}
+
+export function getMuffin() { return window.Muffin }
+```
+
+## Service pattern
+
+Services extend `ElementWebService` (not `Muffin.Service`). Use `WebInterfaceProvider.request()` instead of `Muffin.WebInterface.request()` directly.
+
+```ts
+import { ElementWebService } from '../muffin-sdk'
+import { WebInterfaceProvider } from './WebInterfaceProvider'
+
+export default class EntityManagerService extends ElementWebService {
+    static name = 'entity-manager-service'
+
+    static Interfaces = {
+        EntityManager: '@vritti/dam:::EntityManager'
+    }
+
+    static async getEntity(entityId: string): Promise<unknown> {
+        const cacheKey = `entity-${entityId}`
+        const cached = this.getCached(cacheKey)
+        if (cached) return cached
+
+        const interfaceName = 'EntityManager'
+        await this.lockInterface(interfaceName)
+        try {
+            const response = await WebInterfaceProvider.request(
+                this.Interfaces[interfaceName],
+                { subject: 'getEntity', object: { entityId } },
+                { MAX_RESPONSE_TIME: 10000 }
+            )
+            const result = (response as { result: unknown }).result
+            this.setCached(cacheKey, result, 60 * 1000)
+            return result
+        } catch (error: unknown) {
+            throw new Error((error as { error?: string })?.error || 'Failed to get entity')
+        } finally {
+            this.unlockInterface(interfaceName)
+        }
+    }
+}
+```
+
+## WebInterfaceProvider
+
+Singleton that wraps `Muffin.WebInterface`. Services call this instead of accessing `WebInterface` directly.
+
+```ts
+// src/muffin-services/WebInterfaceProvider.ts (or sdk/)
+export const WebInterfaceProvider = {
+    request: (interfaceAddress: string, message: object, opts?: object) =>
+        window.Muffin.WebInterface.request(interfaceAddress, message, opts)
+}
+```
+
+## Service naming convention
+
+| File | Class |
+|------|-------|
+| `AccountManagementService.ts` | `AccountManagementService` |
+| `EntityManagerService.ts` | `EntityManagerService` |
+| PascalCase + `.ts` | PascalCase |
+
+Project-specific services live in `src/web-services/` or `src/muffin-services/`. Shared org services are added via `muf services add` into `src/muffin-services/`.
+
+## Service base class built-ins
+
+```ts
+static getCached(key: string)                          // → value or null
+static setCached(key: string, value: unknown, ttl?: number)  // default 60s
+static clearCache(key?: string)                        // clears one or all
+
+static async lockInterface(name: string, throttle?: number)
+static unlockInterface(name: string)
+
+static async lockSubscription(name: string, throttle?: number)
+static unlockSubscription(name: string)
+```
+
+## React hook pattern
+
+```ts
+// src/hooks/useEntity.ts
+import { useState, useEffect } from 'react'
+import EntityManagerService from '../muffin-services/EntityManagerService'
+
+export function useEntity(entityId: string) {
+    const [entity, setEntity] = useState<unknown>(null)
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        if (!entityId) return
+        EntityManagerService.getEntity(entityId).then(data => {
+            setEntity(data)
+            setLoading(false)
+        })
+    }, [entityId])
+
+    return { entity, loading }
+}
+```
+
+## React component using a service
+
+```tsx
+export function EntityView({ entityId }: { entityId: string }) {
+    const { entity, loading } = useEntity(entityId)
+
+    if (loading) return <Spinner />
+    return <div>{JSON.stringify(entity)}</div>
+}
+```
+
+## WebInterface request syntax
+
+```ts
+const response = await WebInterfaceProvider.request(
+    '@host/app:::ServiceName',          // receptive (request → response)
+    { subject: 'methodName', object: { ...payload } },
+    { MAX_RESPONSE_TIME: 10000 }
+)
+return (response as { result: unknown }).result
+```
+
+## TypeScript declarations
+
+```ts
+// src/muffin-sdk/muffin.d.ts
+declare global {
+    interface Window {
+        Muffin: {
+            WebRequestSdk: any
+            WebInterface: any
+            Service: any
+            DOMComponent: any
+            PostOffice: any
+        }
+    }
+}
+export {}
+```
+
+---
+
+## Shared org services (hais-services)
+
+Add `.mufrc.json` to the project root:
+
+```json
+{
+  "registries": {
+    "services": [
+      {
+        "url": "https://raw.githubusercontent.com/Vritti-ai/hais-services/main/packages/services-ts/registry.json",
+        "stack": "ts"
+      }
+    ]
+  }
+}
+```
+
+Set `GITHUB_TOKEN` in environment for private repo access.
+
+```sh
+muf services list                            # see available services
+muf services add AccountManagementService    # copies to src/muffin-services/AccountManagementService.ts
+muf services add FileUploaderService --dir ./src/services   # custom dir
+```
+
+Run `muf services add` again to update to the latest version.
+
+### Available shared services (services-ts)
+
+| Service | Description |
+|---------|-------------|
+| AccountManagementService | Account info, session props, wallet, subscriptions, transactions |
+| AgentExplorerService | Agent discovery and exploration |
+| AgenticBrainstormingService | Agentic brainstorming and ideation workflows |
+| ArtefactExplorerService | Artefact browsing and retrieval |
+| BrandExplorerService | Brand discovery and exploration |
+| BrandManagementService | Brand profile, identity, and asset management |
+| CompilationService | Content compilation and rendering pipeline |
+| CompositionService | Composition creation, editing, and lifecycle |
+| EngineDeveloperService | AI engine development and configuration |
+| EngineWorkspaceManagerService | Engine workspace management |
+| EnrichmentManagerService | Content enrichment operations |
+| EntityAssemblyManagerService | Entity assembly and construction |
+| EntityExplorerService | Entity browsing and search |
+| EntityManagerService | Entity CRUD and management |
+| EntityStateManagerService | Entity state tracking and transitions |
+| FileUploaderService | Signed URL upload, upload tracking, status, cleanup |
+| FolderOrganizerService | Folder structure and organisation |
+| FulfillmentManagerService | Fulfillment workflow management |
+| IntegrationManagementService | External integrations and connections |
+| LifecycleManagementService | Content lifecycle and publishing |
+| LicensingService | License management and access control |
+| NoteManagementService | Note creation and management |
+| StreamExplorerService | Stream discovery and browsing |
+| UnrefinedIdeationService | Raw ideation and thought capture |
+| UploadManagerService | Upload queue and session management |
+| UploadStreamSubmissionService | Stream-based upload submission |
+
+---
+
+## Key patterns and gotchas
+
+**Always use `lockInterface` / `unlockInterface`** — prevents duplicate in-flight requests to the same backend service:
+```ts
+await this.lockInterface(interfaceName)
+try {
+    // request
+} finally {
+    this.unlockInterface(interfaceName)  // always in finally
+}
+```
+
+**Cache before locking** — check cache first, lock only if cache miss:
+```ts
+const cached = this.getCached(cacheKey)
+if (cached) return cached
+await this.lockInterface(interfaceName)
+// ...
+```
+
+**Error shape from WebSocket services** — errors come back as `{ error: string }`, not JS Error objects:
+```ts
+} catch (error: unknown) {
+    throw new Error((error as { error?: string })?.error || 'Fallback message')
+}
+```
+
+**Services are static-only** — never instantiate, never use `this.interface`. To subscribe and forward to a React component, use a callback or store:
+```ts
+static subscribeToUpdates(onUpdate: (msg: unknown) => void) {
+    window.Muffin.WebInterface.subscribe(this.Interfaces.Main, 'local', { subject: 'update' })
+    window.Muffin.PostOffice.sockets.local.on('update', onUpdate)
+}
+```
+
+**`WebInterfaceProvider` is not a service** — it does not extend `ElementWebService`. It is infrastructure that lives in `sdk/` or alongside the services, not in `muffin-services/`.

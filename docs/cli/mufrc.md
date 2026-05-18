@@ -63,15 +63,4 @@ export GITHUB_TOKEN=ghp_...
 
 `muf` passes it as a Bearer token on every registry fetch and source fetch. You can also set a per-registry `token` field in the config, but the env var is simpler and keeps secrets out of committed files.
 
-## What each command does with this config
-
-| Command | Public registry | Private registries |
-|---------|----------------|-------------------|
-| `muf components list` | FootLooseLabs/muffin-components | merged in |
-| `muf components search <q>` | FootLooseLabs/muffin-components | merged in |
-| `muf components add <name>` | copies source from public repo | copies source from private repo |
-| `muf templates list` | FootLooseLabs/muffin-templates | merged in |
-| `muf templates init <name>` | copies source from public repo | copies source from private repo |
-| `muf services list` | — | reads configured services registries |
-| `muf services search <q>` | — | reads configured services registries |
-| `muf services add <name>` | — | copies service file into project |
+For the full command reference see [muf CLI](/cli/muf).

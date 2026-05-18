@@ -42,7 +42,8 @@ For AI agents working inside a project, use the stack-specific file instead of l
 - [Managing Services Across Projects](/patterns/service-monorepo) — private services monorepo for orgs, registry.json, muf services add copies files into project
 
 ### CLI
-- [.mufrc.json (Private Registries)](/cli/mufrc) — config file for private component, template, and services registries; GITHUB_TOKEN; per-command behaviour
+- [muf](/cli/muf) — full command reference: muf components list/search/info/add, muf templates list/search/init, muf services list/search/add
+- [.mufrc.json (Private Registries)](/cli/mufrc) — config file for private component, template, and services registries; GITHUB_TOKEN
 - [Setting Up a Private Registry](/cli/private-registry-setup) — required folder/file structure for components-registry, templates-registry, and services-registry repos; registry.json format for each type
 
 ### Migration

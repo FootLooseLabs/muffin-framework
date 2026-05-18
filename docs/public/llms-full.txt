@@ -651,6 +651,171 @@ React component → hook → Service class (extends Muffin.Service) → Muffin.W
 
 Load Muffin before React mounts, initialize `Muffin.WebInterface`, then use service classes from React hooks exactly as in muffin-only projects. No `DOMComponent` subclasses needed in the React layer.
 
+Services extend `ElementWebService` (the TypeScript-compatible base class from `atom-websdk`) rather than `Muffin.Service`, and use a `WebInterfaceProvider` singleton to access the authenticated `WebInterface` instance.
+
+```ts
+import { ElementWebService } from '../muffin-sdk'
+import { WebInterfaceProvider } from './WebInterfaceProvider'
+
+export default class AccountManagementService extends ElementWebService {
+    static name = 'account-management-service'
+
+    static Interfaces = {
+        SessionServiceInterface: '@flpl.atom/authentication-handler:::SessionService',
+    }
+
+    static async getSessionProps(): Promise<unknown> {
+        const interfaceName = 'SessionServiceInterface'
+        await this.lockInterface(interfaceName)
+        try {
+            const response = await WebInterfaceProvider.request(
+                this.Interfaces[interfaceName],
+                { subject: 'getSessionProps', object: {} },
+                { MAX_RESPONSE_TIME: 5000 }
+            )
+            return (response as { result: unknown }).result
+        } finally {
+            this.unlockInterface(interfaceName)
+        }
+    }
+}
+```
+
+---
+
+# Patterns — Managing Services Across Projects
+
+As a muffin-based org grows across multiple projects, the same services tend to get copy-pasted and drift out of sync. The recommended pattern is a **private services monorepo** for the org.
+
+## Structure
+
+```
+your-org-services/   (private repo)
+  packages/
+    services-ts/       ← services for React + Muffin projects (TypeScript)
+    services-vanilla/  ← services for vanilla Muffin projects (plain JS)
+    sdk/               ← WebInterfaceProvider and other infra (not services)
+```
+
+Each package is a plain directory of service files with a `registry.json` manifest — no build step required.
+
+## registry.json
+
+Each package needs a `registry.json` for `muf services` discovery:
+
+```json
+{
+  "services": {
+    "AccountManagementService": {
+      "description": "Account info, session props, wallet, subscriptions",
+      "stack": "ts",
+      "tags": ["account", "wallet", "subscriptions"]
+    }
+  }
+}
+```
+
+## Consuming via muf
+
+Configure `.mufrc.json` in each project root:
+
+```json
+{
+  "registries": {
+    "services": [
+      {
+        "url": "https://raw.githubusercontent.com/your-org/your-services/main/packages/services-ts/registry.json",
+        "stack": "ts",
+        "alias": "@org-services",
+        "path": "../../your-services/packages/services-ts"
+      }
+    ]
+  }
+}
+```
+
+Then:
+
+```sh
+muf services list                        # list all available services
+muf services add AccountManagementService  # checks/prints vite alias + import line
+```
+
+## Manual vite alias (no CLI)
+
+```js
+// vite.config.js
+resolve: {
+    alias: {
+        '@org-services': path.resolve(__dirname, '../../your-services/packages/services-ts')
+    }
+}
+```
+
+```json
+// tsconfig.json
+{ "compilerOptions": { "paths": { "@org-services/*": ["../../your-services/packages/services-ts/*"] } } }
+```
+
+```ts
+import AccountManagementService from '@org-services/AccountManagementService'
+```
+
+## What belongs in the monorepo
+
+Move a service in when it appears in more than one project with minimal divergence. Services tied to a single project's domain stay local under `src/muffin-services/` or `src/web-services/`. The monorepo supplements — it does not replace — project-local services.
+
+---
+
+# CLI — .mufrc.json (Private Registries)
+
+`muf` supports private org registries for components, templates, and services alongside the public FootLooseLabs registries. Place `.mufrc.json` in your project root (or any ancestor — `muf` walks up from cwd).
+
+## Full config shape
+
+```json
+{
+  "registries": {
+    "components": [
+      "https://raw.githubusercontent.com/your-org/your-components/main/registry.json"
+    ],
+    "templates": [
+      "https://raw.githubusercontent.com/your-org/your-templates/main/registry.json"
+    ],
+    "services": [
+      {
+        "url": "https://raw.githubusercontent.com/your-org/your-services/main/packages/services-ts/registry.json",
+        "stack": "ts",
+        "alias": "@org-services",
+        "path": "../../your-services/packages/services-ts"
+      }
+    ]
+  }
+}
+```
+
+Private entries are merged with the public registry — private wins on name collision. For private GitHub repos, set `GITHUB_TOKEN` in the environment — picked up automatically for all fetches.
+
+## Services config fields
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `url` | yes | URL to the `registry.json` in your services repo |
+| `stack` | no | `"ts"` or `"vanilla"` — shown in list output |
+| `alias` | no | Import alias (default: `@hais-services`) |
+| `path` | no | Relative path used in vite alias snippet |
+| `token` | no | Per-registry token — prefer `GITHUB_TOKEN` env var |
+
+## Per-command behaviour
+
+| Command | Public registry | Private registries |
+|---------|----------------|-------------------|
+| `muf list` | FootLooseLabs/muffin-components | merged in |
+| `muf list --templates` | FootLooseLabs/muffin-templates | merged in |
+| `muf add <name>` | fetches from public repo | fetches from private repo |
+| `muf services list` | — | reads configured services registries |
+| `muf services add <name>` | — | checks vite alias, prints import line |
+
 ---
 
 # Migration — Upgrading to v3.0.0

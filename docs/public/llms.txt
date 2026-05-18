@@ -32,6 +32,11 @@ CDN: https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.1.7/dist/sdk.min.js
 
 ### Patterns
 - [Muffin + Tailwind + Vite](/patterns/muffin-only) — project structure, 3_app.js, component and service example
+- [React + Muffin](/patterns/react-muffin) — Muffin as WebSocket/service layer only, React owns UI, service classes from hooks
+- [Managing Services Across Projects](/patterns/service-monorepo) — private services monorepo for orgs, registry.json, muf services add, vite alias pattern
+
+### CLI
+- [.mufrc.json (Private Registries)](/cli/mufrc) — config file for private component, template, and services registries; GITHUB_TOKEN; per-command behaviour
 
 ### Migration
 - [Upgrading to v3.0.0](/migration/v3) — breaking changes from v2, new createStore/derived/esc features, upgrade checklist

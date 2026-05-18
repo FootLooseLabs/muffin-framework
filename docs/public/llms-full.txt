@@ -717,7 +717,7 @@ Each package needs a `registry.json` for `muf services` discovery:
 
 ## Consuming via muf
 
-Configure `.mufrc.json` in each project root:
+Configure `.mufrc.json` in each project root (commit it):
 
 ```json
 {
@@ -725,41 +725,27 @@ Configure `.mufrc.json` in each project root:
     "services": [
       {
         "url": "https://raw.githubusercontent.com/your-org/your-services/main/packages/services-ts/registry.json",
-        "stack": "ts",
-        "alias": "@org-services",
-        "path": "../../your-services/packages/services-ts"
+        "stack": "ts"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/your-org/your-services/main/packages/services-vanilla/registry.json",
+        "stack": "vanilla"
       }
     ]
   }
 }
 ```
 
-Then:
+Set `GITHUB_TOKEN` in the environment for private repo access. Then:
 
 ```sh
-muf services list                        # list all available services
-muf services add AccountManagementService  # checks/prints vite alias + import line
+muf services list                            # list all available services
+muf services add AccountManagementService    # → src/muffin-services/AccountManagementService.ts
+muf services add account-management         # → src/web-services/account-management.js
+muf services add AccountManagementService --dir ./src/services   # custom dir
 ```
 
-## Manual vite alias (no CLI)
-
-```js
-// vite.config.js
-resolve: {
-    alias: {
-        '@org-services': path.resolve(__dirname, '../../your-services/packages/services-ts')
-    }
-}
-```
-
-```json
-// tsconfig.json
-{ "compilerOptions": { "paths": { "@org-services/*": ["../../your-services/packages/services-ts/*"] } } }
-```
-
-```ts
-import AccountManagementService from '@org-services/AccountManagementService'
-```
+Works exactly like `muf add` for components — the service file is copied into the project. Run again to update to the latest version.
 
 ## What belongs in the monorepo
 
@@ -785,9 +771,11 @@ Move a service in when it appears in more than one project with minimal divergen
     "services": [
       {
         "url": "https://raw.githubusercontent.com/your-org/your-services/main/packages/services-ts/registry.json",
-        "stack": "ts",
-        "alias": "@org-services",
-        "path": "../../your-services/packages/services-ts"
+        "stack": "ts"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/your-org/your-services/main/packages/services-vanilla/registry.json",
+        "stack": "vanilla"
       }
     ]
   }
@@ -801,9 +789,7 @@ Private entries are merged with the public registry — private wins on name col
 | Field | Required | Description |
 |-------|----------|-------------|
 | `url` | yes | URL to the `registry.json` in your services repo |
-| `stack` | no | `"ts"` or `"vanilla"` — shown in list output |
-| `alias` | no | Import alias (default: `@hais-services`) |
-| `path` | no | Relative path used in vite alias snippet |
+| `stack` | no | `"ts"` → copies to `src/muffin-services/`, `"vanilla"` → `src/web-services/` |
 | `token` | no | Per-registry token — prefer `GITHUB_TOKEN` env var |
 
 ## Per-command behaviour
@@ -812,9 +798,9 @@ Private entries are merged with the public registry — private wins on name col
 |---------|----------------|-------------------|
 | `muf list` | FootLooseLabs/muffin-components | merged in |
 | `muf list --templates` | FootLooseLabs/muffin-templates | merged in |
-| `muf add <name>` | fetches from public repo | fetches from private repo |
+| `muf add <name>` | copies source from public repo | copies source from private repo |
 | `muf services list` | — | reads configured services registries |
-| `muf services add <name>` | — | checks vite alias, prints import line |
+| `muf services add <name>` | — | copies service file into project |
 
 ---
 

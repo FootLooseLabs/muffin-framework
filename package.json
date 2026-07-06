@@ -5,11 +5,15 @@
     "build": "pnpm -r run build",
     "build:element": "pnpm --filter @muffin/element run build",
     "build:sdk": "pnpm --filter @muffin/atom-websdk run build",
+    "playground": "pnpm --filter @muffin/playground run dev",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs"
   },
   "devDependencies": {
+    "@playwright/test": "^1.49.0",
     "vitepress": "^1.0.0"
   }
 }

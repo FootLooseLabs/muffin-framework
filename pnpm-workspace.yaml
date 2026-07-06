@@ -1,3 +1,4 @@
 packages:
   - 'element'
   - 'atom-websdk'
+  - 'playground'

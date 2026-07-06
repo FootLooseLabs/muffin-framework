@@ -4,6 +4,18 @@ Release history for `@muffin/atom-websdk`. Each release bundles the correspondin
 
 ---
 
+## 3.1.8 — element 0.9.4
+**CDN:** `https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.1.8/dist/sdk.min.js`
+
+### Fixed
+- **Boolean attribute removal on re-render** — Boolean attributes (`disabled`, `readonly`, `checked`, etc.) set conditionally in `markupFunc` were never removed from the live DOM when the condition flipped, because `__patchUnequalAttributes` only applied/updated attributes from the new render but never called `removeAttribute` for attributes absent in the new render. Now iterates the live node's attributes and removes any that are not present in the rendered fragment. `data-state` is explicitly skipped — it is set by the framework, not by `markupFunc`, and must persist across renders.
+- **`on-load` not firing for cached images** — For cached resources the browser sets `img.complete = true` synchronously at fragment creation time, before `__processRenderedFragEventListeners` runs. The `load` event had already fired with no handler attached. The binder now checks `el.complete === true` immediately after attaching the `onload` handler and fires a synthetic `load` event if so. Safe for non-image elements (`complete` is `undefined`, which is falsy).
+- **`webrequest` token always `[object Promise]`** — `_generateToken()` is async but was called without `await` inside the synchronous `Promise` constructor, so the token sent to the server was always an unresolved `Promise` object. Moved the `await` outside the `Promise` constructor so the resolved hex token is sent correctly.
+- **`webrequest` / `request` ignoring caller-provided `MAX_RESPONSE_TIME`** — The default parameter `options = { MAX_RESPONSE_TIME: 5000 }` is entirely replaced when any options object is passed (e.g. `{ MAX_RESPONSE_TIME: 300000 }`), but a bare `{}` or `{ opLabel }` would leave `options.MAX_RESPONSE_TIME` as `undefined`, causing the client-side timeout to fire instantly. Changed to `options = {}` with `const maxResponseTime = options.MAX_RESPONSE_TIME ?? 5000` so the fallback only applies when the key is genuinely absent.
+- **`disconnect()` not implemented** — `disconnect()` was declared in TypeScript types but absent at runtime, causing a crash (`sdkcon.disconnect is not a function`) in projects that call it on cleanup. Implemented: cancels the keep-alive interval, nulls `onclose`/`onerror` handlers (preventing spurious reconnect/error events from a voluntary close), closes the socket with code 1000, and nulls `_connection`.
+
+---
+
 ## 3.1.7 — element 0.9.3
 **CDN:** `https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.1.7/dist/sdk.min.js`
 

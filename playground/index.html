@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Muffin Playground</title>
+  <script>
+    // Must be set before the element module evaluates (regular scripts run before deferred modules).
+    window.MUFFIN_CONFIG = {
+      LOGGING_LEVEL: "IMP",
+      POST_OFFICE_WORKER_URL: "",
+      INTROSPECT: false,
+      DB_NAME: "muffin-playground-db",
+      DB_VERSION: "0.1",
+      DEBUG_SCOPE: {}
+    };
+  </script>
+  <style>
+    body { font-family: sans-serif; padding: 16px; background: #f8f9fa; }
+    h1   { margin-bottom: 4px; }
+    .subtitle { color: #666; margin-bottom: 24px; font-size: 14px; }
+    .scenario {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 16px 20px;
+      margin-bottom: 16px;
+    }
+    .scenario h2 { margin: 0 0 4px; font-size: 16px; }
+    .scenario .desc { color: #666; font-size: 13px; margin-bottom: 12px; }
+    .pass { color: #1a7f37; font-weight: bold; }
+    .fail { color: #cf222e; font-weight: bold; }
+    button { padding: 6px 14px; cursor: pointer; margin-top: 8px; }
+    #sdk-status { padding: 10px; border-radius: 4px; margin-bottom: 16px; font-size: 14px; }
+    #sdk-status.ok   { background: #dafbe1; color: #1a7f37; }
+    #sdk-status.err  { background: #ffebe9; color: #cf222e; }
+  </style>
+</head>
+<body>
+  <h1>Muffin Playground</h1>
+  <p class="subtitle">Loads from source — no build step required. Changes to element/src or atom-websdk/src are live.</p>
+  <div id="sdk-status">Loading SDK…</div>
+
+  <!-- ── Scenario 1: Boolean attribute removal (regression for issue #9) ──────── -->
+  <div class="scenario" data-scenario="boolean-attr-removal">
+    <h2>Scenario 1 — Boolean attribute removal</h2>
+    <p class="desc">
+      A button starts <code>disabled</code> via a template expression. Clicking "Toggle" should
+      remove the <code>disabled</code> attribute on the next render. Regression test for the
+      <code>__patchUnequalAttributes</code> fix.
+    </p>
+    <scenario-boolean-attr></scenario-boolean-attr>
+  </div>
+
+  <!-- ── Scenario 2: Empty string slot (repro for issue #8) ───────────────────── -->
+  <div class="scenario" data-scenario="empty-string-slot">
+    <h2>Scenario 2 — Empty string slot <code>${condition ? '&lt;el&gt;' : ''}</code></h2>
+    <p class="desc">
+      A template expression produces an empty string on the falsy branch. Toggling the condition
+      should show/hide the element without breaking subsequent renders. Repro for issue #8.
+    </p>
+    <scenario-empty-string-slot></scenario-empty-string-slot>
+  </div>
+
+  <!-- ── Scenario 3: Variable-count slot (repro for issue #12) ────────────────── -->
+  <div class="scenario" data-scenario="variable-count-slot">
+    <h2>Scenario 3 — Variable-count <code>${list.map(…).join('')}</code></h2>
+    <p class="desc">
+      A list rendered inline with <code>.map().join('')</code> starts with 2 items. Clicking
+      "Add item" should grow it to 3, then 4, etc. Repro for issue #12 — the reconciler
+      silently drops new items when count increases.
+    </p>
+    <scenario-variable-count></scenario-variable-count>
+  </div>
+
+  <!-- ── Scenario 4: on-load for cached resources (regression for issue #11) ──── -->
+  <div class="scenario" data-scenario="onload-cached">
+    <h2>Scenario 4 — <code>on-load</code> for cached / data-URI images</h2>
+    <p class="desc">
+      An <code>&lt;img&gt;</code> with a <code>data:</code> URI is always complete synchronously
+      (<code>el.complete === true</code>) before the <code>on-load</code> handler is attached.
+      The handler should still fire via the synthetic-event fix. Regression test for issue #11.
+    </p>
+    <scenario-onload-cached></scenario-onload-cached>
+  </div>
+
+  <script type="module" src="./components.js"></script>
+</body>
+</html>

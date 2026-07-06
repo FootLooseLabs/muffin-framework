@@ -2,14 +2,16 @@
  * Muffin Playground — scenario components.
  * Loads element and atom-websdk from source so changes are reflected without rebuilding.
  *
- * Each component is self-evaluating: postRender() sets a [data-result] attribute
- * ("pass" | "fail" | "pending") so Playwright can assert without inspecting styles.
+ * Design rule: postRender() must NEVER write to uiVars. uiVars has no dirty-check —
+ * any assignment (even same value) calls _scheduleRender(), causing an infinite loop.
+ * postRender() manipulates the live DOM directly instead (no re-render triggered).
+ *
+ * Playwright reads [data-result] from the live DOM after postRender has run.
  */
 
 import '@element';
 import { applyAtomWebSDK } from '@sdk';
 
-// atom-websdk auto-applies when window.Muffin exists, but belt-and-suspenders here.
 if (window.Muffin && !Muffin.DOMComponent.prototype.__domExtensionsApplied) {
     applyAtomWebSDK(window.Muffin);
 }
@@ -27,8 +29,8 @@ if (window.Muffin?.DOMComponent && window.Muffin?.Service) {
 
 // ─── Scenario 1: Boolean attribute removal ────────────────────────────────────
 //
-// Repro: button starts with `disabled` in template. After toggle, `disabled`
-// must be absent from the live DOM (tests __patchUnequalAttributes removeAttribute fix).
+// Verifies __patchUnequalAttributes calls removeAttribute.
+// postRender reads the live DOM and sets [data-result] directly — no uiVars write.
 
 class ScenarioBooleanAttr extends Muffin.DOMComponent {
     static domElName = 'scenario-boolean-attr';
@@ -39,17 +41,13 @@ class ScenarioBooleanAttr extends Muffin.DOMComponent {
                 ${uiVars.isDisabled ? 'Disabled button' : 'Enabled button'}
             </button>
             <button on-click="toggle">Toggle disabled</button>
-            <p data-result="${uiVars.result}" style="margin-top:8px">
-                ${uiVars.resultText}
-            </p>
+            <p data-result="pending" style="margin-top:8px">Click "Toggle disabled" to test.</p>
         </div>`;
     }
 
     constructor() {
         super();
         this.uiVars.isDisabled = true;
-        this.uiVars.result = 'pending';
-        this.uiVars.resultText = 'Click "Toggle disabled" to test.';
         this.uiVars.toggleCount = 0;
     }
 
@@ -59,24 +57,21 @@ class ScenarioBooleanAttr extends Muffin.DOMComponent {
     }
 
     postRender() {
-        const btn = this.getElement('#target-btn');
-        if (!btn || this.uiVars.toggleCount === 0) return;
+        if (this.uiVars.toggleCount === 0) return;
+        const btn    = this.getElement('#target-btn');
+        const result = this.getElement('[data-result]');
+        if (!btn || !result) return;
 
-        const hasDisabled = btn.hasAttribute('disabled');
-        const expectedDisabled = this.uiVars.isDisabled;
+        // Write directly to live DOM — NOT to uiVars (would re-trigger render).
+        const domHasDisabled  = btn.hasAttribute('disabled');
+        const shouldBeEnabled = !this.uiVars.isDisabled;
 
-        if (hasDisabled === expectedDisabled) {
-            if (!expectedDisabled) {
-                // Toggled to enabled — this is the key pass condition
-                this.uiVars.result = 'pass';
-                this.uiVars.resultText = '✓ PASS — disabled removed from DOM after toggle';
-            } else {
-                this.uiVars.result = 'pending';
-                this.uiVars.resultText = 'Toggled back to disabled — toggle again to test removal.';
-            }
-        } else {
-            this.uiVars.result = 'fail';
-            this.uiVars.resultText = `✗ FAIL — DOM hasAttribute(disabled)=${hasDisabled} but expected ${expectedDisabled}`;
+        if (shouldBeEnabled && !domHasDisabled) {
+            result.setAttribute('data-result', 'pass');
+            result.textContent = '✓ PASS — disabled removed from DOM after toggle';
+        } else if (shouldBeEnabled && domHasDisabled) {
+            result.setAttribute('data-result', 'fail');
+            result.textContent = '✗ FAIL — disabled still in DOM after toggle (attribute removal bug)';
         }
     }
 }
@@ -85,8 +80,8 @@ ScenarioBooleanAttr.compose();
 
 // ─── Scenario 2: Empty string slot ────────────────────────────────────────────
 //
-// Repro: ${condition ? '<p>visible</p>' : ''} — the empty-string branch should not
-// break subsequent renders. Toggle through false→true→false to exercise both paths.
+// Verifies ${condition ? '<el/>' : ''} doesn't break the reconciler.
+// No [data-result] needed — Playwright asserts DOM presence directly.
 
 class ScenarioEmptyStringSlot extends Muffin.DOMComponent {
     static domElName = 'scenario-empty-string-slot';
@@ -95,43 +90,16 @@ class ScenarioEmptyStringSlot extends Muffin.DOMComponent {
         return `<div>
             ${uiVars.show ? '<p id="conditional-el" style="color:green">Conditional element is visible</p>' : ''}
             <button on-click="toggle">Toggle (show=${uiVars.show})</button>
-            <p data-result="${uiVars.result}" style="margin-top:8px">${uiVars.resultText}</p>
         </div>`;
     }
 
     constructor() {
         super();
         this.uiVars.show = false;
-        this.uiVars.result = 'pending';
-        this.uiVars.resultText = 'Click "Toggle" to test.';
-        this.uiVars.toggleCount = 0;
     }
 
     toggle() {
         this.uiVars.show = !this.uiVars.show;
-        this.uiVars.toggleCount++;
-    }
-
-    postRender() {
-        if (this.uiVars.toggleCount === 0) return;
-
-        const el = this.getElement('#conditional-el');
-        const show = this.uiVars.show;
-
-        // Both conditions must hold: element present when show=true, absent when show=false.
-        if (show && el) {
-            this.uiVars.result = 'pass';
-            this.uiVars.resultText = `✓ PASS (toggle ${this.uiVars.toggleCount}) — show=true, element in DOM`;
-        } else if (!show && !el) {
-            this.uiVars.result = 'pass';
-            this.uiVars.resultText = `✓ PASS (toggle ${this.uiVars.toggleCount}) — show=false, element absent`;
-        } else if (show && !el) {
-            this.uiVars.result = 'fail';
-            this.uiVars.resultText = `✗ FAIL — show=true but element missing from DOM`;
-        } else {
-            this.uiVars.result = 'fail';
-            this.uiVars.resultText = `✗ FAIL — show=false but element still in DOM`;
-        }
     }
 }
 
@@ -139,12 +107,8 @@ ScenarioEmptyStringSlot.compose();
 
 // ─── Scenario 3: Variable-count slot ──────────────────────────────────────────
 //
-// Repro: inline ${list.map(...).join('')} where item count grows. The reconciler's
-// __findAndReplaceUnequalNodes silently drops new items when _root2Child is undefined
-// (root1 has more children than root2 at that index).
-//
-// Structure mirrors the wity-app pattern that triggered the bug:
-//   root → wrapper div → dynamic p.item siblings.
+// Verifies inline ${list.map(...).join('')} reconciles when count grows.
+// No [data-result] needed — Playwright counts .item elements directly.
 
 class ScenarioVariableCount extends Muffin.DOMComponent {
     static domElName = 'scenario-variable-count';
@@ -155,22 +119,17 @@ class ScenarioVariableCount extends Muffin.DOMComponent {
             .join('');
 
         return `<div>
-            <div id="list-wrapper">
-                ${items}
-            </div>
+            <div id="list-wrapper">${items}</div>
             <button on-click="addItem" style="margin-top:8px">Add item</button>
-            <p style="margin-top:8px;font-size:13px;color:#555">
-                Expected: ${uiVars.items.length} item(s)
+            <p style="margin-top:4px;font-size:13px;color:#555">
+                uiVars.items.length = ${uiVars.items.length}
             </p>
-            <p data-result="${uiVars.result}">${uiVars.resultText}</p>
         </div>`;
     }
 
     constructor() {
         super();
         this.uiVars.items = ['Item A', 'Item B'];
-        this.uiVars.result = 'pending';
-        this.uiVars.resultText = 'Click "Add item" to test.';
     }
 
     addItem() {
@@ -178,33 +137,18 @@ class ScenarioVariableCount extends Muffin.DOMComponent {
         const next = labels[this.uiVars.items.length] ?? this.uiVars.items.length;
         this.uiVars.items = [...this.uiVars.items, `Item ${next}`];
     }
-
-    postRender() {
-        const wrapper = this.getElement('#list-wrapper');
-        if (!wrapper || this.uiVars.items.length <= 2) return;
-
-        const domCount = wrapper.querySelectorAll('.item').length;
-        const expected = this.uiVars.items.length;
-
-        if (domCount === expected) {
-            this.uiVars.result = 'pass';
-            this.uiVars.resultText = `✓ PASS — ${domCount} items in DOM, expected ${expected}`;
-        } else {
-            this.uiVars.result = 'fail';
-            this.uiVars.resultText = `✗ FAIL — ${domCount} items in DOM, expected ${expected} (reconciler dropped ${expected - domCount})`;
-        }
-    }
 }
 
 ScenarioVariableCount.compose();
 
 // ─── Scenario 4: on-load for cached / data-URI images ─────────────────────────
 //
-// Repro: a data: URI image has el.complete===true synchronously. Without the fix,
-// the on-load handler is attached after the load event already fired → handler never called.
-// The synthetic event fix checks el.complete after attaching the handler and fires manually.
+// Verifies the synthetic load event fires for el.complete===true images.
+// postRender sets [data-result] directly — NOT through uiVars.
 //
-// A 1×1 transparent GIF data URI is always immediately complete.
+// Guard in event_binder: only fires synthetic event when _getDomNode() is null
+// (first render). Without this, every re-render would re-invoke the handler via
+// uiVars → _scheduleRender → infinite loop.
 
 const TRANSPARENT_GIF =
     'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
@@ -221,27 +165,29 @@ class ScenarioOnloadCached extends Muffin.DOMComponent {
                 alt="1x1 transparent (always cached/complete)"
                 style="border:1px solid #ccc;width:32px;height:32px;display:block;margin-bottom:8px"
             />
-            <p style="font-size:13px;color:#555">
-                Image complete on attach: <strong>${uiVars.wasComplete ?? '?'}</strong>
-            </p>
-            <p data-result="${uiVars.result}">${uiVars.resultText}</p>
+            <p data-result="pending">Waiting for on-load to fire…</p>
         </div>`;
     }
 
     constructor() {
         super();
-        this.uiVars.loaded = false;
-        this.uiVars.wasComplete = null;
-        this.uiVars.result = 'pending';
-        this.uiVars.resultText = 'Waiting for on-load to fire…';
+        // No state needed — result is set directly in postRender after handler fires.
+        this._loadFired = false;
     }
 
     handleLoad(el, ev) {
-        // Record whether the image was complete at the time the handler fired
-        this.uiVars.wasComplete = el?.complete ?? true;
-        this.uiVars.loaded = true;
-        this.uiVars.result = 'pass';
-        this.uiVars.resultText = '✓ PASS — on-load handler fired (synthetic event for cached image)';
+        // Store on instance (not uiVars) so postRender can read it without re-rendering.
+        this._loadFired = true;
+    }
+
+    postRender() {
+        const result = this.getElement('[data-result]');
+        if (!result) return;
+        // Direct DOM write — no uiVars, no render loop.
+        if (this._loadFired) {
+            result.setAttribute('data-result', 'pass');
+            result.textContent = '✓ PASS — on-load handler fired (synthetic event for cached image)';
+        }
     }
 }
 

@@ -2,7 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
     testDir: './test/playwright',
-    fullyParallel: true,
+    fullyParallel: false,
+    workers: process.env.CI ? 2 : 1, // sequential locally (tests are fast; parallel tabs cause OOM)
     retries: process.env.CI ? 2 : 0,
     reporter: process.env.CI ? 'github' : 'list',
 

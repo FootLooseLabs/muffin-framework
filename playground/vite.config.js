@@ -11,6 +11,7 @@ export default defineConfig({
     server: {
         port: 5174,
         strictPort: true,
+        hmr: false, // disable HMR — avoids WS interference with Playwright test pages
     },
     resolve: {
         alias: {

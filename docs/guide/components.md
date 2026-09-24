@@ -6,6 +6,11 @@ Every muffin component extends `Muffin.DOMComponent` (which extends `HTMLElement
 
 `markupFunc` and `stateSpace` are **static**. Instance state lives in `constructor()` via `this.uiVars`.
 
+Two things about `markupFunc` that surprise newcomers:
+
+- **It must return exactly one outer element.** The framework tags and reconciles only that first element. Two siblings or a fragment breaks style scoping, `getElement`, and DOM patching.
+- **`this` inside it is the instance, not the class** — the framework calls `markupFunc.call(instance, …)`. So `this.uiVars`, `this.current_state`, `this.esc()`, and `this.getElement()` all work inside it, despite the `static` keyword. (Nested `static` markup helpers you call as `Class.helper(...)` get `this` = the class — pass them instance data explicitly, or use the `_constructor` argument.)
+
 ```js
 class UserProfile extends Muffin.DOMComponent {
     static domElName = 'user-profile'
@@ -200,7 +205,7 @@ class ItemList extends Muffin.DOMComponent {
 
 ## styleMarkup
 
-Scoped styles per component. `rootEl` is a CSS selector string (`[data-component=uid]`) that scopes rules to this instance:
+Scoped styles per component. `rootEl` is a CSS selector string (`[data-component=uid]`) that matches **the exact element `markupFunc` returns** — the same node as `this._getDomNode()`, not a wrapper around it. `${rootEl} { … }` styles that element itself; `${rootEl} .child { … }` styles its descendants. The `<style>` is prepended inside the root element, so scoping is automatic — do not use `:host` (there is no Shadow DOM):
 
 ```js
 static styleMarkup(rootEl, currentState) {

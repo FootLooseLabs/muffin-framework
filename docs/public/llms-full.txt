@@ -84,6 +84,10 @@ Every muffin component extends `Muffin.DOMComponent` (which extends `HTMLElement
 
 `markupFunc` and `stateSpace` are **static**. Instance state lives in `constructor()` via `this.uiVars`.
 
+Two non-obvious rules about `markupFunc`:
+- **It MUST return exactly one outer element.** The framework tags and reconciles only that first element; two siblings or a fragment break style scoping, `getElement`, and DOM patching.
+- **Inside `markupFunc`, `this` is the INSTANCE, not the class** — the framework calls `markupFunc.call(instance, …)`. So `this.uiVars`, `this.current_state`, `this.esc()`, `this.getElement()` all work despite the `static` keyword. BUT nested static markup helpers you call as `SomeClass.helper(...)` get `this` = the class, not the instance — pass them instance data (`uiVars`, `current_state`) explicitly, or use the 5th arg `_constructor`. To read the current state machine state inside markupFunc use `this.current_state` (or `uiVars.state?.name`).
+
 ## Registration
 
 `.compose()` registers the Web Component and wires up the Muffin internals.
@@ -165,7 +169,7 @@ return `
 
 ## styleMarkup
 
-Scoped styles per component. `rootEl` is a CSS selector scoped to this instance:
+Scoped styles per component. `rootEl` is a CSS selector (`[data-component=uid]`) that matches THE EXACT element markupFunc returns — the same node as `this._getDomNode()`, not a wrapper around it. `${rootEl} { }` styles that element itself; `${rootEl} .child { }` styles descendants. The `<style>` is prepended inside the root element. Do not use `:host` — there is no Shadow DOM.
 
 ```js
 static styleMarkup(rootEl, currentState) {
@@ -494,6 +498,8 @@ postRender() {
 
 ### `this.getElements(selector)`
 All matching elements as an array.
+
+Scope = descendants of the element markupFunc returned (same node as `rootEl` / `_getDomNode()`). They match descendants only — NOT the root element itself. To touch the root, use `_getDomNode()` (internal) or `toggleRootAttr()`.
 
 **Prefer these over raw `querySelector`.** `_getDomNode()` is an internal method and not part of the public API.
 

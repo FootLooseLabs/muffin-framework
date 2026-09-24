@@ -19,7 +19,7 @@ MyComponent.compose()
 | `static stateSpace` | `object` | State machine definition. Keys = state names, values = `{ apriori: [...] }`. |
 | `static derived` | `object` | Computed state. Functions of `(uiVars, data)`. Merged into uiVars at render time. |
 | `static schema` | `object` | Default shape for `_data` (attribute data). |
-| `static styleMarkup` | `function` | Returns CSS string. `rootEl` = scoped CSS selector for this instance. |
+| `static styleMarkup` | `function` | Returns CSS string. `rootEl` is a selector (`[data-component=uid]`) that matches **the exact element `markupFunc` returns** — the same node as `this._getDomNode()`, not a wrapper around it. `${rootEl} { … }` styles that element itself; `${rootEl} .child { … }` styles its descendants. See [styleMarkup](#stylemarkup-and-the-root-element). |
 | `static advertiseAs` | `string` | Name under which this component registers as a PostOffice interface. See [PostOffice](/guide/post-office). |
 
 ## Instance properties (set in `constructor()`)
@@ -44,6 +44,44 @@ static markupFunc(_data, uid, uiVars, routeVars, _constructor, stores)
 | `routeVars` | Current route parameters (if Router active) |
 | `_constructor` | Reference to the component class |
 | `stores` | Snapshot of all declared stores |
+
+### `this` inside `markupFunc` is the instance
+
+Although `markupFunc` is declared `static`, the framework invokes it with `markupFunc.call(instance, …)`. So inside `markupFunc`, **`this` is the component instance** — not the class. This is deliberate: it makes `this.uiVars`, `this.current_state`, `this.esc()`, `this.composedScope`, and `this.getElement()` all available directly in the render function.
+
+```js
+static markupFunc(_data, uid, uiVars, routeVars, _constructor, stores) {
+    // `this` === the instance here
+    if (this.current_state === 'loading') return `<div class="spinner"></div>`
+    return `<p>${this.esc(uiVars.message)}</p>`
+}
+```
+
+**Nested static markup helpers behave differently.** When `markupFunc` calls another static method as `SomeClass.helper(...)`, `this` inside that helper is the **class**, not the instance. Pass instance data (`uiVars`, `current_state`, etc.) to such helpers explicitly — that is also what the 5th argument `_constructor` is for:
+
+```js
+static markupFunc(_data, uid, uiVars, routeVars, _constructor) {
+    // called as _constructor.rowMarkup(...) → `this` inside rowMarkup is the CLASS
+    return uiVars.items.map(item => _constructor.rowMarkup(item)).join('')
+}
+
+static rowMarkup(item) {
+    // `this` === the class here — no access to instance uiVars/current_state
+    return `<div class="row">${item.label}</div>`
+}
+```
+
+### The single-root-element rule
+
+`markupFunc` **must return exactly one outer element.** The framework tags only the first element (`data-component`, the `constructedFrom` back-reference), prepends `styleMarkup` inside it, and reconciles from it. Returning two sibling elements or a fragment breaks style scoping, `getElement`/`getElements` scope, and DOM patching (only the first element is managed).
+
+```js
+// ✅ one outer element
+return `<div class="card">…</div>`
+
+// ❌ two siblings — only the first is managed by the framework
+return `<h2>Title</h2><div class="card">…</div>`
+```
 
 ## Lifecycle methods
 
@@ -76,6 +114,30 @@ HTML-escape a value for safe insertion into markup. Escapes `&`, `<`, `>`, `"`, 
 
 ### `getParent()`
 Returns the nearest ancestor `DOMComponent` instance.
+
+### `getElement(selector)` / `getElements(selector)`
+Scoped `querySelector` / `querySelectorAll` — search **within the element `markupFunc` returned** (the same node as `rootEl` and `_getDomNode()`). `getElements` returns an array. See [DOM Extensions](/api/dom-extensions#element-queries). Prefer these over `document.querySelector`; `_getDomNode()` is internal.
+
+## styleMarkup and the root element
+
+`rootEl` is not a wrapper the framework adds around your markup — it **is** the single outer element your `markupFunc` returns. The framework sets `data-component="<uid>"` on that element, and `rootEl` is the selector `[data-component=<uid>]` that targets it. The same element is what `this._getDomNode()` returns and what `getElement`/`getElements` scope into. They are all the same node.
+
+```js
+static markupFunc(_data, uid) {
+    return `<div class="card">…</div>`   // ← this <div> is rootEl / _getDomNode()
+}
+
+static styleMarkup(rootEl, currentState) {
+    return `<style type="text/css">
+        ${rootEl} { position: relative; }          /* styles the .card itself */
+        ${rootEl} .spinner {                        /* styles a descendant */
+            display: ${currentState === 'loading' ? 'block' : 'none'};
+        }
+    </style>`
+}
+```
+
+The `<style>` is prepended **inside** that root element, so the scoping is automatic. Do not use `:host` — there is no Shadow DOM.
 
 ## Dynamic attributes on child components
 

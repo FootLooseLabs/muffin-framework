@@ -4,6 +4,8 @@ Applied to `DOMComponent.prototype` by `applyAtomWebSDK()`. Available on every c
 
 ## Element queries
 
+The "scope" of both methods is the element `markupFunc` returned — the same node as `rootEl` and `this._getDomNode()`. They are exactly `_getDomNode().querySelector(...)` / `querySelectorAll(...)`, so they match **descendants of the root element only — not the root element itself**. To read/modify the root, use `this._getDomNode()` (or, for attributes, `this.toggleRootAttr()`).
+
 ### `this.getElement(selector)`
 Returns the first matching element within the component's rendered DOM. Equivalent to a scoped `querySelector` — searches only within this component's root, not the full document.
 

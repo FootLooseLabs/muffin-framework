@@ -64,7 +64,7 @@ async loadOrder() {
 
 ```js
 static markupFunc(_data, uid, uiVars, routeVars, _constructor) {
-    const state = _constructor.prototype._currentState   // or read uiVars.state.name
+    const state = this.current_state   // `this` is the instance inside markupFunc; or read uiVars.state?.name
 
     if (state === 'loading') return `<div class="spinner"></div>`
     if (state === 'error')   return `<p class="error">${uiVars.errorMsg}</p>`

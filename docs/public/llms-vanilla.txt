@@ -248,3 +248,11 @@ this.interface.on('update', (msg) => { this.uiVars.data = msg })
 ```
 
 **Dynamic child attributes don't re-render the child** — render dynamic output inline in the parent template instead of passing changing attributes to child components.
+
+**`markupFunc` must return exactly one outer element** — the framework tags and reconciles only the first element. Two siblings or a fragment break style scoping, `getElement`, and DOM patching.
+
+**Inside `markupFunc`, `this` is the instance (not the class)** — the framework calls it with `markupFunc.call(instance, …)`, so `this.uiVars`, `this.current_state`, `this.esc()`, `this.getElement()` work despite `static`. Read the state machine state with `this.current_state` (or `uiVars.state?.name`). Nested static markup helpers called as `Class.helper(...)` get `this` = the class — pass them instance data explicitly, or use the `_constructor` argument.
+
+**`rootEl` in `styleMarkup` IS the returned element, not a wrapper** — it's the selector `[data-component=uid]` matching the same node as `_getDomNode()`. `${rootEl} { }` styles that element; `${rootEl} .child { }` styles descendants. No `:host` (no Shadow DOM).
+
+**`getElement` / `getElements` scope = descendants of the root element, not the root itself** — they are `_getDomNode().querySelector(...)` / `querySelectorAll(...)`.

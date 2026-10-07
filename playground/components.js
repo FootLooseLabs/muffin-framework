@@ -192,3 +192,102 @@ class ScenarioOnloadCached extends Muffin.DOMComponent {
 }
 
 ScenarioOnloadCached.compose();
+
+// ─── Scenario 5: Focused button grafted into unrelated markup ─────────────────
+//
+// A real mouse click focuses the "← Back" button. When the body swaps back to
+// the choice view, the reconciler must NOT keep the focused button and graft it
+// into the "Paste" choice's title slot (answer-spaces-editor bug, wity-app).
+
+class ScenarioFocusGraft extends Muffin.DOMComponent {
+    static domElName = 'scenario-focus-graft';
+
+    static markupFunc(_data, uid, uiVars, routeVars, _constructor) {
+        return `<div class="s5">
+            <p class="s5-intro">Pick a mode.</p>
+            ${uiVars.mode === 'paste' ? _constructor._pasteMarkup() : _constructor._chooseMarkup()}
+        </div>`;
+    }
+
+    static _chooseMarkup() {
+        return `<div class="s5-choose">
+            <button type="button" on-click="onAdd"><span class="s5-title"><b>+</b> Add</span><span class="s5-sub">new item</span></button>
+            <button type="button" id="s5-paste" on-click="onStartPaste"><span class="s5-title"><b>#</b> Paste</span><span class="s5-sub">import</span></button>
+        </div>`;
+    }
+
+    static _pasteMarkup() {
+        return `<div class="s5-paste">
+            <textarea></textarea>
+            <div class="s5-actions">
+                <button type="button" id="s5-back" on-click="onCancel">← Back</button>
+                <button type="button" on-click="onImport">Import</button>
+            </div>
+        </div>`;
+    }
+
+    constructor() {
+        super();
+        this.uiVars.mode = 'choose';
+    }
+
+    onAdd() {}
+    onImport() {}
+    onStartPaste() { this.uiVars.mode = 'paste'; }
+    onCancel() { this.uiVars.mode = 'choose'; }
+}
+
+ScenarioFocusGraft.compose();
+
+// ─── Scenario 6: Typing while the surrounding structure changes ───────────────
+//
+// The input's sibling list changes length on every keystroke, and its wrapper
+// switches tag (div → section) once the query is longer than 3 chars. Focus,
+// value and caret must survive every re-render.
+
+class ScenarioTypingStructural extends Muffin.DOMComponent {
+    static domElName = 'scenario-typing-structural';
+
+    static markupFunc(_data, uid, uiVars) {
+        const q = uiVars.query;
+        const items = Array.from({ length: q.length }, (_, i) => `<li>${i}</li>`).join('');
+        const tag = q.length > 3 ? 'section' : 'div';
+        return `<div class="s6">
+            <${tag} class="s6-wrap">
+                <input id="s6-input" type="text" value="${this.esc(q)}" on-input="onType" />
+                <ul class="s6-list">${items}</ul>
+            </${tag}>
+        </div>`;
+    }
+
+    constructor() {
+        super();
+        this.uiVars.query = '';
+    }
+
+    onType(srcEl) { this.uiVars.query = srcEl.value; }
+}
+
+ScenarioTypingStructural.compose();
+
+// ─── Scenario 7: Keyboard toggle button keeps focus and updates its label ─────
+
+class ScenarioToggleButton extends Muffin.DOMComponent {
+    static domElName = 'scenario-toggle-button';
+
+    static markupFunc(_data, uid, uiVars) {
+        return `<div class="s7">
+            <button type="button" id="s7-toggle" on-click="onToggle">${uiVars.open ? 'Close' : 'Open'}</button>
+            ${uiVars.open ? '<div class="s7-panel"><p>Panel content</p></div>' : ''}
+        </div>`;
+    }
+
+    constructor() {
+        super();
+        this.uiVars.open = false;
+    }
+
+    onToggle() { this.uiVars.open = !this.uiVars.open; }
+}
+
+ScenarioToggleButton.compose();

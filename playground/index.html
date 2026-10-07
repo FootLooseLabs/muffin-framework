@@ -83,6 +83,27 @@
     <scenario-onload-cached></scenario-onload-cached>
   </div>
 
+  <!-- ── Scenario 5: Focused button grafted into unrelated markup ─────────── -->
+  <div class="scenario" data-scenario="focus-graft">
+    <h2>Scenario 5 — Focused button is not grafted after a body swap</h2>
+    <p class="desc">Click "Paste", then "← Back" with the mouse. The Paste choice must read "Paste", not "← Back".</p>
+    <scenario-focus-graft></scenario-focus-graft>
+  </div>
+
+  <!-- ── Scenario 6: Typing while surrounding structure changes ──────────── -->
+  <div class="scenario" data-scenario="typing-structural">
+    <h2>Scenario 6 — Typing survives structural re-renders</h2>
+    <p class="desc">Each keystroke changes the list length; past 3 chars the wrapper changes tag. Focus, value and caret must survive.</p>
+    <scenario-typing-structural></scenario-typing-structural>
+  </div>
+
+  <!-- ── Scenario 7: Keyboard toggle button ──────────────────────────────── -->
+  <div class="scenario" data-scenario="toggle-button">
+    <h2>Scenario 7 — Toggle button keeps focus and updates its label</h2>
+    <p class="desc">Focus the button and press Enter. The label must flip and focus must stay on the button.</p>
+    <scenario-toggle-button></scenario-toggle-button>
+  </div>
+
   <script type="module" src="./components.js"></script>
 </body>
 </html>

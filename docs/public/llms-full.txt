@@ -6,8 +6,8 @@ Muffin is a client-side Web Components framework built by Footloose Labs. It has
 
 Both ship as a single CDN bundle. After loading, everything is available under `window.Muffin`.
 
-Current stable version: atom-websdk 3.1.7 / element 0.9.3
-CDN: https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.1.7/dist/sdk.min.js
+Current stable version: atom-websdk 3.1.8 / element 0.9.4
+CDN: https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.1.8/dist/sdk.min.js
 
 ---
 
@@ -25,7 +25,7 @@ Both ship as a single CDN bundle (`sdk.min.js`) or as separate ES modules.
 ## CDN
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.1.6/dist/sdk.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.1.8/dist/sdk.min.js"></script>
 ```
 
 After loading, `window.Muffin` is available with everything:
@@ -992,6 +992,7 @@ Real-world issues from projects using Muffin. Includes resolved items for refere
 | 3 | Child component attribute reactivity | Changing an attribute on a child Muffin component from the parent does not trigger child re-render. No `observedAttributes` equivalent. | Render dynamic output inline in the parent template. See DOMComponent docs. | Architectural limitation — documented. |
 | 4 | Store subscriptions not firing | `this.stores` declared in constructor did not register reactive subscriptions. `_subscribeToStores()` ran before subclass constructor assigned `this.stores`. | `store.subscribe(() => this.render())` in `onConnect()`. | Resolved in element 0.9.3 / atom-websdk 3.1.6 |
 | 5 | `composedScope` after `switchState` | Children in new state markup not yet in `composedScope` synchronously after `switchState`. | Use `await this.awaitChildLoad('key')` — deterministic, event-driven. | Architectural behaviour — documented. |
-| 6 | Boolean attribute removal on re-render | Boolean attributes (`disabled`, `readonly`) set via template expression not removed when condition flips. DOM patcher only calls `setAttribute`, never `removeAttribute`. | Manage toggling boolean attributes imperatively in `postRender`. | Confirmed bug — fix pending. |
-| 7 | `on-load` for cached resources | Handler attached too late for cached images — `load` fires synchronously during DOM insertion before event binder runs. | `addEventListener('load', handler, { once: true })` imperatively; check `el.complete` first. | Confirmed timing bug — fix pending. |
+| 6 | Boolean attribute removal on re-render | Boolean attributes (`disabled`, `readonly`) set via template expression not removed when condition flips. DOM patcher only calls `setAttribute`, never `removeAttribute`. | Manage toggling boolean attributes imperatively in `postRender`. | Resolved in element 0.9.4 / atom-websdk 3.1.8 |
+| 7 | `on-load` for cached resources | Handler attached too late for cached images — `load` fires synchronously during DOM insertion before event binder runs. | `addEventListener('load', handler, { once: true })` imperatively; check `el.complete` first. | Resolved in element 0.9.4 / atom-websdk 3.1.8 |
 | 8 | `getElement` / `getElements` undiscoverable | Methods existed but were not in public API docs. Developers fell back to `_getDomNode().querySelector()`. | Use `this.getElement(selector)` and `this.getElements(selector)`. `_getDomNode()` is internal. | Docs gap — resolved. |
+| 10 | Focused element grafted after view switch | Clicking a button that switches views (e.g. "← Back") left that focused button inside the new view, replacing unrelated content such as another button's label. The reconciler protected any focused element from replacement, not just text fields. | None needed after upgrading. | Resolved in element 0.9.4 / atom-websdk 3.1.8 |

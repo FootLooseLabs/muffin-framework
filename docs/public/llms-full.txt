@@ -6,8 +6,8 @@ Muffin is a client-side Web Components framework built by Footloose Labs. It has
 
 Both ship as a single CDN bundle. After loading, everything is available under `window.Muffin`.
 
-Current stable version: atom-websdk 3.1.8 / element 0.9.4
-CDN: https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.1.8/dist/sdk.min.js
+Current stable version: atom-websdk 3.1.9 / element 0.9.5
+CDN: https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.1.9/dist/sdk.min.js
 
 ---
 
@@ -25,7 +25,7 @@ Both ship as a single CDN bundle (`sdk.min.js`) or as separate ES modules.
 ## CDN
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.1.8/dist/sdk.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.1.9/dist/sdk.min.js"></script>
 ```
 
 After loading, `window.Muffin` is available with everything:
@@ -996,3 +996,4 @@ Real-world issues from projects using Muffin. Includes resolved items for refere
 | 7 | `on-load` for cached resources | Handler attached too late for cached images — `load` fires synchronously during DOM insertion before event binder runs. | `addEventListener('load', handler, { once: true })` imperatively; check `el.complete` first. | Resolved in element 0.9.4 / atom-websdk 3.1.8 |
 | 8 | `getElement` / `getElements` undiscoverable | Methods existed but were not in public API docs. Developers fell back to `_getDomNode().querySelector()`. | Use `this.getElement(selector)` and `this.getElements(selector)`. `_getDomNode()` is internal. | Docs gap — resolved. |
 | 10 | Focused element grafted after view switch | Clicking a button that switches views (e.g. "← Back") left that focused button inside the new view, replacing unrelated content such as another button's label. The reconciler protected any focused element from replacement, not just text fields. | None needed after upgrading. | Resolved in element 0.9.4 / atom-websdk 3.1.8 |
+| 11 | Imperatively-set attributes removed on re-render | In 3.1.8, attributes set via `toggleRootAttr` (or by hand) were stripped on the next re-render, e.g. a modal setting `is-open` closed immediately after opening. | Upgrade to 3.1.9. | Resolved in element 0.9.5 / atom-websdk 3.1.9 |

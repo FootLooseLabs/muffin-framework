@@ -291,3 +291,34 @@ class ScenarioToggleButton extends Muffin.DOMComponent {
 }
 
 ScenarioToggleButton.compose();
+
+// ─── Scenario 8: Imperatively-set attributes survive re-renders ───────────────
+//
+// Mirrors boards-directory-modal.show(): a state write schedules a re-render,
+// then toggleRootAttr('is-open', true) sets an attribute markupFunc never renders,
+// then a later re-render follows (data load). The attribute must survive.
+// Rendered attributes (Scenario 1) must still be removed.
+
+class ScenarioImperativeAttrs extends Muffin.DOMComponent {
+    static domElName = 'scenario-imperative-attrs';
+
+    static markupFunc(_data, uid, uiVars) {
+        return `<div class="s8">
+            <p class="s8-status">loads: ${uiVars.loads}</p>
+            <button type="button" id="s8-open" on-click="show">Open</button>
+        </div>`;
+    }
+
+    constructor() {
+        super();
+        this.uiVars.loads = 0;
+    }
+
+    show() {
+        this.uiVars.loads = this.uiVars.loads + 1;            // schedules a re-render
+        this.toggleRootAttr('is-open', true);                  // set imperatively
+        setTimeout(() => { this.uiVars.loads = this.uiVars.loads + 1; }, 50); // later re-render
+    }
+}
+
+ScenarioImperativeAttrs.compose();

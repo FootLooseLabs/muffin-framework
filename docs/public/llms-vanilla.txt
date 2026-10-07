@@ -3,7 +3,7 @@
 Working knowledge for a vanilla Muffin project (plain JS, no React). For full framework reference see llms-full.txt.
 
 Framework: element + atom-websdk, loaded via CDN as `window.Muffin`.
-CDN: https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.1.8/dist/sdk.min.js
+CDN: https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.1.9/dist/sdk.min.js
 
 ---
 

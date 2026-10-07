@@ -104,6 +104,13 @@
     <scenario-toggle-button></scenario-toggle-button>
   </div>
 
+  <!-- ── Scenario 8: Imperatively-set attributes survive re-renders ─────── -->
+  <div class="scenario" data-scenario="imperative-attrs">
+    <h2>Scenario 8 — Imperatively-set attributes survive re-renders</h2>
+    <p class="desc">"Open" sets is-open via toggleRootAttr, then re-renders twice. The attribute must survive.</p>
+    <scenario-imperative-attrs></scenario-imperative-attrs>
+  </div>
+
   <script type="module" src="./components.js"></script>
 </body>
 </html>

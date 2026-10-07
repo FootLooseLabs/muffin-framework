@@ -160,3 +160,16 @@ test('Scenario 7 — toggle button label updates and focus stays on it', async (
     await expect(s.locator('.s7-panel')).toHaveCount(0);
     await expect(btn).toBeFocused();
 });
+
+// ─── Scenario 8: Imperatively-set attributes survive re-renders ───────────────
+
+test('Scenario 8 — toggleRootAttr attribute survives re-renders', async ({ page }) => {
+    await page.goto('/');
+
+    const s    = scenario(page, 'imperative-attrs');
+    const root = s.locator('.s8');
+
+    await s.locator('#s8-open').click();
+    await expect(s.locator('.s8-status')).toHaveText('loads: 2'); // both re-renders happened
+    await expect(root).toHaveAttribute('is-open', 'true');
+});

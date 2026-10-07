@@ -4,6 +4,14 @@ Release history for `@muffin/atom-websdk`. Each release bundles the correspondin
 
 ---
 
+## 3.1.9 — element 0.9.5
+**CDN:** `https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.1.9/dist/sdk.min.js`
+
+### Fixed
+- **Imperatively-set attributes stripped on re-render (regression in 3.1.8)** — 3.1.8's stale-attribute removal deleted every live attribute absent from the new render, including attributes set imperatively via `toggleRootAttr` or app code. Components that open by setting a root attribute and then re-render (e.g. a modal whose `show()` updates a store and calls `toggleRootAttr('is-open', true)`) closed immediately. Each render now records which attributes `markupFunc` produced; the patcher removes only those the new render dropped. Conditionally rendered attributes (`disabled`, `readonly`, …) are still removed; imperatively-set ones are kept, as in 3.1.7. **Upgrade from 3.1.8.**
+
+---
+
 ## 3.1.8 — element 0.9.4
 **CDN:** `https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.1.8/dist/sdk.min.js`
 

@@ -4,6 +4,23 @@ Release history for `@muffin/atom-websdk`. Each release bundles the correspondin
 
 ---
 
+## 3.2.0 — element 0.10.0
+**CDN:** `https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.2.0/dist/sdk.min.js`
+
+### Router: the address is the one source of truth ([Router](/api/router))
+- **The query a page was opened with is no longer lost or repeated.** At load, the router used to `go()` to the route it read, which pushed a history entry. In path style it rebuilt the address from a parse that dropped the first query param, so `/?assistant-session=x` became `/home` and lost the param. Params were also appended to the name it had read, so `?a&k=1` became `?a&k=1&k=1`. Loading now adds no history entry. An address that names no route is left as it is, and the default route is shown. The route and params are read from the address, never from `history.state`.
+- **Path style writes params as a standard query:** `/learn?tab=x`, not `/learn&tab=x`. The old form is read and rewritten in place once, so links and bookmarks keep working. Params are encoded and decoded (`URLSearchParams`), so values with `&`, `=`, spaces or `#` are safe.
+- **`basePath` is real.** It was accepted but ignored. In path style, routes now live below it and the base itself names no route.
+- **New:** `href(name, params)`, the address `go()` would write (for links); `match(url)`, which route an address is on; and `go(name, params, { replace: true })` for redirects, so Back doesn't return to the address that was left.
+- **`go()` accepts params as a query string** (`'a=1&b=2'`, as `gotoRoute`'s `route-params` gives them), and drops `undefined` and `null` values. Going to the address you're already on reuses the history entry.
+- In query and hash style, a name re-serialised by `URLSearchParams` (`?learn=`) is still read as the name. A hash that is data rather than a route (`#p=1&c=2`) is left alone.
+- Back and Forward are handled with `addEventListener('popstate')`, so the router no longer takes over `window.onpopstate`.
+- Removed (internal, unused outside the router): `_getParamsObjFromPathString`, `_getRouteNameFromWindowLocation`, `_getRouteNameFromHistoryState` and `updateRouteObjParams`.
+
+**Upgrading:** nothing to change. Afterwards, replace any address built from `routeDelimiter` with `href()`, and any parsing of `location` with `match()`.
+
+---
+
 ## 3.1.9 — element 0.9.5
 **CDN:** `https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.1.9/dist/sdk.min.js`
 

@@ -41,8 +41,9 @@ import './components/index.js'
 
 ```js
 // Router
+// path style below the app's mount point (the dev server needs a history fallback); see docs/api/router.md
 Muffin._router = new Muffin.Router({
-    routeDelimiter: '?',
+    routeDelimiter: '/',
     basePath: '/tools/my-tool/'
 })
 Muffin._router.addRouteConfig([
@@ -82,7 +83,7 @@ AppUI.compose = () => {
 <html>
 <head>
     <meta charset="UTF-8" />
-    <script src="https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.1.9/dist/sdk.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.2.0/dist/sdk.min.js"></script>
 </head>
 <body>
     <app-ui></app-ui>

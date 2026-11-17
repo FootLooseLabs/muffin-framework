@@ -39,6 +39,7 @@ export default defineConfig({
                     { text: 'DOMComponent', link: '/api/dom-component' },
                     { text: 'createStore()', link: '/api/create-store' },
                     { text: 'PostOffice', link: '/api/post-office' },
+                    { text: 'Router', link: '/api/router' },
                     { text: 'Service', link: '/api/service' },
                     { text: 'DOM Extensions', link: '/api/dom-extensions' },
                     { text: 'WebRequestSdk', link: '/api/web-request-sdk' }

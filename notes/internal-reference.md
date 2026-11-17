@@ -273,6 +273,7 @@ import './components/index.js'         // all components composed here
 
 `3_app.js` pattern:
 ```javascript
+// query style: the host serves only the page's own path; basePath matters in path style ('/'). See docs/api/router.md
 Muffin._router = new Muffin.Router({
     routeDelimiter: '?',
     basePath: '/tools/agent-builder/'

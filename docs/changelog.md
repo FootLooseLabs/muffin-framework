@@ -4,6 +4,20 @@ Release history for `@muffin/atom-websdk`. Each release bundles the correspondin
 
 ---
 
+## 3.3.0 — element 0.11.0
+**CDN:** `https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.3.0/dist/sdk.min.js`
+
+### Router: headless routing, complete ([Router](/api/router))
+- **Route table.** A route may declare a `path` with named params: `{ name: 'idea', path: 'explore/:slug' }`, and `*` for the rest of the path. `match()` gives `{ name, route, params }`, with params from the path over the query's. `href('idea', { slug })` and `go('idea', { slug })` fill the path and put the rest in the query; a missing param is an error. Going to a path by name (`go('explore/' + slug)`) keeps working and matches the declared route. This replaces apps matching route names against their own regexes.
+- **`beforeLeave({ ask, pending? })`.** Asked before `go()`, Back and Forward. A no, a throw or a rejection keeps the page where it is. `pending()` makes the browser ask before the page itself is left (`beforeunload`). Back and Forward are asked about through the Navigation API (every engine since January 2026). The browser allows one refusal per user activation, so a person can always leave. Guards that answer at once decide immediately; a guard that asks the person holds the step until they answer, then the step is retaken to the same entry. Tested in Chromium and Firefox.
+- **`onChange(listener)`.** Every route shown, with `{ name, route, params, from }`. The `onBeforeLoad` message now carries `route` too, and `params` include the path's.
+- **`go()` returns a Promise of whether it went.** With no guard, or guards that answer at once, it still goes immediately.
+- **Route names keep their escapes** (`%2F` inside a param), and writing one doesn't double-encode them.
+
+**Upgrading:** nothing to change. Afterwards, an app's route outlet can drop its own name parsing and pattern regexes (declare `path` instead) and its after-the-fact "leave?" check (register a guard instead). The outlet keeps only what the page looks like.
+
+---
+
 ## 3.2.0 — element 0.10.0
 **CDN:** `https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.2.0/dist/sdk.min.js`
 

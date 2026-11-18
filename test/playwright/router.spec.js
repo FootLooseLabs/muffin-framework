@@ -21,6 +21,8 @@ const page_ = (options, routes) => `<!doctype html><html><head><meta charset="ut
   Muffin._router = new Muffin.Router(${JSON.stringify(options)});
   Muffin._router.addRouteConfig(${JSON.stringify(routes)});
   Muffin.PostOffice.sockets.element_router.on('onBeforeLoad', (r) => window.__seen.push({ name: r.name, params: r.params }));
+  window.__changes = [];
+  Muffin._router.onChange((c) => window.__changes.push({ name: c.name, route: c.route, params: c.params, from: c.from && c.from.name }));
 </script></head><body></body></html>`;
 
 async function open(page, path, options = { routeDelimiter: '/' }, routes = [{ name: 'home', defaultRoute: true }, { name: 'learn' }]) {
@@ -94,7 +96,7 @@ test.describe('path style', () => {
     test('href gives the address go would write (a link starts at the top: no hash of this page)', async ({ page }) => {
         await open(page, '/#somewhere');
         expect(await page.evaluate(() => Muffin._router.href('learn', { q: 'a b' }))).toBe('/learn?q=a+b');
-        expect(await page.evaluate(() => Muffin._router.match('/learn&x=1?y=2'))).toEqual({ name: 'learn', params: { x: '1', y: '2' }, legacy: true });
+        expect(await page.evaluate(() => Muffin._router.match('/learn&x=1?y=2'))).toEqual({ name: 'learn', route: 'learn', params: { x: '1', y: '2' }, legacy: true });
     });
 
     test('basePath: routes live below it, the base itself names none', async ({ page }) => {
@@ -153,5 +155,98 @@ test.describe('hash style', () => {
         await page.evaluate(() => Muffin._router.go('learn', { a: 'b c' }));
         expect(await here(page)).toBe('/call?x=1#learn&a=b+c');
         expect((await seen(page)).at(-1)).toEqual({ name: 'learn', params: { a: 'b c' } });
+    });
+});
+
+// ─── route table: declared paths with named params ────────────────────────────
+
+test.describe('route table', () => {
+    const routes = [{ name: 'home', defaultRoute: true }, { name: 'idea', path: 'explore/:slug' }, { name: 'files', path: 'files/*' }];
+
+    test('an address is matched to the declared route, its params read from the path and the query', async ({ page }) => {
+        await open(page, '/explore/a%20b%2Fc?tab=x', { routeDelimiter: '/' }, routes);
+        expect(await page.evaluate(() => window.__changes)).toEqual([{ name: 'explore/a b%2Fc', route: 'idea', params: { slug: 'a b/c', tab: 'x' }, from: null }]);
+        expect(await page.evaluate(() => Muffin._router.match('/files/x/y.png'))).toEqual({ name: 'files/x/y.png', route: 'files', params: { '*': 'x/y.png' }, legacy: false });
+    });
+
+    test('go and href by the route name fill its path; the rest is the query; a missing param is refused', async ({ page }) => {
+        await open(page, '/', { routeDelimiter: '/' }, routes);
+        expect(await page.evaluate(() => Muffin._router.href('idea', { slug: 'a b', tab: 'x' }))).toBe('/explore/a%20b?tab=x');
+        expect(await page.evaluate(() => { try { Muffin._router.href('idea', {}); return 'no error'; } catch (e) { return e.message; } })).toBe("Router: route 'idea' needs slug");
+        await page.evaluate(() => Muffin._router.go('idea', { slug: 'coffee' }));
+        await page.evaluate(() => Muffin._router.go('home'));
+        await page.evaluate(() => Muffin._router.go('explore/tea')); // gone to by its address, as apps do today
+        expect(await here(page)).toBe('/explore/tea');
+        const changes = await page.evaluate(() => window.__changes);
+        expect(changes.map((c) => [c.route, c.params.slug, c.from])).toEqual([['home', undefined, null], ['idea', 'coffee', 'home'], ['home', undefined, 'explore/coffee'], ['idea', 'tea', 'home']]);
+    });
+});
+
+// ─── the transition: guards and the change event ──────────────────────────────
+
+test.describe('leaving', () => {
+    test('a guard is asked before go: refused, nothing changes; allowed, it goes', async ({ page }) => {
+        await open(page, '/');
+        await page.evaluate(() => { window.__answer = false; window.__asked = []; Muffin._router.beforeLeave(({ from, to }) => { window.__asked.push([from.name, to.name]); return Promise.resolve(window.__answer); }); });
+        expect(await page.evaluate(() => Muffin._router.go('learn', { a: 1 }))).toBe(false);
+        expect(await here(page)).toBe('/');
+        expect(await added(page)).toBe(0);
+        await page.evaluate(() => { window.__answer = true; });
+        expect(await page.evaluate(() => Muffin._router.go('learn', { a: 1 }))).toBe(true);
+        expect(await here(page)).toBe('/learn?a=1');
+        expect(await page.evaluate(() => window.__asked)).toEqual([['home', 'learn'], ['home', 'learn']]);
+    });
+
+    test('a guard is asked before Back: refused, the page stays; allowed, it goes back', async ({ page }) => {
+        test.skip(!(await page.evaluate(() => 'navigation' in window).catch(() => true)), 'Navigation API');
+        await open(page, '/');
+        await page.evaluate(() => Muffin._router.go('learn'));
+        await page.evaluate(() => { window.__answer = false; Muffin._router.beforeLeave(() => window.__answer); });
+        await page.evaluate(() => history.back());
+        await page.waitForTimeout(300);
+        expect(await here(page)).toBe('/learn');
+        expect((await seen(page)).at(-1).name).toBe('learn');
+        await page.evaluate(() => { window.__answer = true; });
+        await page.evaluate(() => history.back());
+        await page.waitForFunction(() => location.pathname === '/');
+        await page.waitForFunction(() => window.__seen.at(-1).name === 'home');
+    });
+
+    test('a guard that asks the person: Back waits for the answer — no, it stays; yes, it goes back to that entry', async ({ page }) => {
+        test.skip(!(await page.evaluate(() => 'navigation' in window).catch(() => true)), 'Navigation API');
+        await open(page, '/');
+        await page.evaluate(() => Muffin._router.go('learn'));
+        await page.evaluate(() => Muffin._router.go('explore/x'));
+        await page.evaluate(() => Muffin._router.beforeLeave(() => new Promise((answer) => { window.__answer = answer; })));
+        await page.evaluate(() => history.back());
+        await page.waitForFunction(() => typeof window.__answer === 'function');
+        expect(await here(page)).toBe('/explore/x');
+        await page.evaluate(() => window.__answer(false));
+        await page.waitForTimeout(200);
+        expect(await here(page)).toBe('/explore/x');
+        await page.evaluate(() => { window.__answer = null; history.back(); });
+        await page.waitForFunction(() => typeof window.__answer === 'function');
+        await page.evaluate(() => window.__answer(true));
+        await page.waitForFunction(() => location.pathname === '/learn');
+        await page.waitForFunction(() => window.__seen.at(-1).name === 'learn');
+        expect(await page.evaluate(() => navigation.currentEntry.index)).toBe(1);
+    });
+
+    test('a guard that throws keeps the page where it is', async ({ page }) => {
+        await open(page, '/');
+        await page.evaluate(() => Muffin._router.beforeLeave(() => { throw new Error('boom'); }));
+        expect(await page.evaluate(() => Muffin._router.go('learn'))).toBe(false);
+        expect(await here(page)).toBe('/');
+    });
+
+    test('a removed guard is not asked; pending asks the browser before the page is left', async ({ page }) => {
+        await open(page, '/');
+        await page.evaluate(() => { window.__off = Muffin._router.beforeLeave(() => false); window.__off(); });
+        expect(await page.evaluate(() => Muffin._router.go('learn'))).toBe(true);
+        await page.evaluate(() => Muffin._router.beforeLeave({ ask: () => true, pending: () => true }));
+        await page.mouse.click(5, 5); // the browser asks only a page that was used
+        const asked = new Promise((resolve) => page.once('dialog', (d) => { resolve(d.type()); d.dismiss(); }));
+        await page.close({ runBeforeUnload: true });
+        expect(await asked).toBe('beforeunload');
     });
 });

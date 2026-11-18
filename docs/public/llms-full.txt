@@ -6,8 +6,8 @@ Muffin is a client-side Web Components framework built by Footloose Labs. It has
 
 Both ship as a single CDN bundle. After loading, everything is available under `window.Muffin`.
 
-Current stable version: atom-websdk 3.2.0 / element 0.10.0
-CDN: https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.2.0/dist/sdk.min.js
+Current stable version: atom-websdk 3.3.0 / element 0.11.0
+CDN: https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.3.0/dist/sdk.min.js
 
 ---
 
@@ -25,7 +25,7 @@ Both ship as a single CDN bundle (`sdk.min.js`) or as separate ES modules.
 ## CDN
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.2.0/dist/sdk.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.3.0/dist/sdk.min.js"></script>
 ```
 
 After loading, `window.Muffin` is available with everything:
@@ -647,14 +647,16 @@ src/
 
 ### Router
 
+Headless: the address, the route table, navigation, the transition. What a route looks like is a component's.
 ```js
 Muffin._router = new Muffin.Router({ routeDelimiter: '/', basePath: '/' })   // '/' path · '?' query · '#' hash
-Muffin._router.addRouteConfig([{ name: 'home', defaultRoute: true }, { name: 'learn' }])
+Muffin._router.addRouteConfig([{ name: 'home', defaultRoute: true }, { name: 'idea', path: 'explore/:slug' }])
 // starts itself on load (no history entry; an address naming no route is left as it is)
-Muffin._router.go('explore/coffee', { tab: 'notes' })   // -> /explore/coffee?tab=notes
-Muffin._router.href('learn', { q: 'a b' })              // -> '/learn?q=a+b' — for links; never build from routeDelimiter
-Muffin._router.match()                                  // -> { name, params, legacy }
-Muffin.PostOffice.sockets.element_router.on('onBeforeLoad', ({ name, params }) => { … })
+Muffin._router.go('idea', { slug: 'coffee', tab: 'notes' })  // -> /explore/coffee?tab=notes  (returns Promise<boolean>)
+Muffin._router.href('idea', { slug: 'a b' })                 // -> '/explore/a%20b' — for links; never build from routeDelimiter
+Muffin._router.match()                                       // -> { name, route, params, legacy }
+const stop = Muffin._router.beforeLeave({ ask: ({ from, to }) => confirmLeave(), pending: () => unsaved })  // go, Back, Forward; tab close
+Muffin._router.onChange(({ name, route, params, from }) => { … })
 ```
 The address is the one source of truth. Params are a standard query. Old path-style addresses (`/learn&x=1`) are read and rewritten in place.
 

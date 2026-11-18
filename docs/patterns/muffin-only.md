@@ -83,7 +83,7 @@ AppUI.compose = () => {
 <html>
 <head>
     <meta charset="UTF-8" />
-    <script src="https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.2.0/dist/sdk.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.3.0/dist/sdk.min.js"></script>
 </head>
 <body>
     <app-ui></app-ui>

@@ -17,6 +17,12 @@ export default defineConfig({
             name: 'chromium',
             use: { ...devices['Desktop Chrome'] },
         },
+        // the router leans on the platform (History, Navigation API): its spec runs in a second engine too
+        {
+            name: 'firefox',
+            use: { ...devices['Desktop Firefox'] },
+            testMatch: /router\.spec\.js/,
+        },
     ],
 
     webServer: {

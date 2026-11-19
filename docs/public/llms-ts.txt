@@ -42,7 +42,7 @@ createRoot(document.getElementById('root')!).render(<App />)
 // src/muffin-sdk/index.ts
 export async function loadAtomWebSDK() {
     if (window.Muffin) return
-    await loadScript('https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.3.0/dist/sdk.min.js')
+    await loadScript('https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.4.2/dist/sdk.min.js')
     Muffin.WebInterface = new Muffin.WebRequestSdk({ label: 'sandbox' })
     await Muffin.WebInterface.connect()
 }
@@ -119,11 +119,12 @@ static getCached(key: string)                          // → value or null
 static setCached(key: string, value: unknown, ttl?: number)  // default 60s
 static clearCache(key?: string)                        // clears one or all
 
-static async lockInterface(name: string, throttle?: number)
+static async lockInterface(name: string)      // one holder at a time, the rest wait in order
 static unlockInterface(name: string)
 
-static async lockSubscription(name: string, throttle?: number)
+static async lockSubscription(name: string)
 static unlockSubscription(name: string)
+// each service class has its own cache
 ```
 
 ## React hook pattern
@@ -253,7 +254,7 @@ Run `muf services add` again to update to the latest version.
 
 ## Key patterns and gotchas
 
-**Always use `lockInterface` / `unlockInterface`** — prevents duplicate in-flight requests to the same backend service:
+**Requests need no lock** — any number can be in flight to one interface, and each gets its own reply. Use `lockInterface` / `unlockInterface` only for an operation that must not overlap itself:
 ```ts
 await this.lockInterface(interfaceName)
 try {
@@ -280,9 +281,9 @@ await this.lockInterface(interfaceName)
 
 **Services are static-only** — never instantiate, never use `this.interface`. To subscribe and forward to a React component, use a callback or store:
 ```ts
-static subscribeToUpdates(onUpdate: (msg: unknown) => void) {
-    window.Muffin.WebInterface.subscribe(this.Interfaces.Main, 'local', { subject: 'update' })
-    window.Muffin.PostOffice.sockets.local.on('update', onUpdate)
+static async subscribeToUpdates(onUpdate: (msg: unknown) => void) {
+    await window.Muffin.WebInterface.websubscribe('@host/app|||Updates', 'global', 'update')
+    window.Muffin.PostOffice.sockets.global.on('update', onUpdate)
 }
 ```
 

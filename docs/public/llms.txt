@@ -6,8 +6,8 @@ Muffin is a client-side Web Components framework built by Footloose Labs. It has
 
 Both ship as a single CDN bundle (`sdk.min.js`). After loading, everything is available under `window.Muffin`.
 
-Current stable version: atom-websdk 3.3.0 / element 0.11.0
-CDN: https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.3.0/dist/sdk.min.js
+Current stable version: atom-websdk 3.4.2 / element 0.11.0
+CDN: https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.4.2/dist/sdk.min.js
 
 ## Stack-specific context files
 
@@ -32,9 +32,9 @@ For AI agents working inside a project, use the stack-specific file instead of l
 - [DOMComponent](/api/dom-component) — full static/instance property reference, lifecycle, dynamic child attribute limitation, composedScope
 - [createStore()](/api/create-store) — parameters, return value, persistence, socket sync, component declaration pattern
 - [PostOffice](/api/post-office) — static methods, sockets, PostOffice.Socket
-- [Service](/api/service) — static service pattern, subscribe from static context, built-in TTL cache, interface/subscription locking
+- [Service](/api/service) — static service pattern, each service's own TTL cache, named locks, subscribing from a service
 - [DOM Extensions](/api/dom-extensions) — getElement, getElements, toggleBtnBusyState, toggleRootAttr, toggleSurface, awaitChildLoad, initSubscriptions, callParent
-- [WebRequestSdk](/api/web-request-sdk) — connect, request, websubscribe, communicate, Muffin.WebInterface singleton
+- [WebRequestSdk](/api/web-request-sdk) — connect, requests and replies (any number in flight, each its own reply), websubscribe/webunsubscribe, events; Node: @muffin/atom-websdk/core
 
 ### Patterns
 - [Muffin + Tailwind + Vite](/patterns/muffin-only) — project structure, 3_app.js, component and service example

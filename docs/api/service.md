@@ -1,95 +1,7 @@
 # Service
 
-Base class for SDK service layers. Extends with TTL caching, interface locking, and subscription locking.
-
-```js
-class MyService extends Muffin.Service {
-    static name = 'MyService'
-
-    static Interfaces = {
-        Main: '@host/app:::ServiceInterface'
-    }
-
-    static async getData(id) {
-        const res = await Muffin.WebInterface.request(
-            this.Interfaces.Main,
-            { subject: 'getData', params: { id } },
-            { MAX_RESPONSE_TIME: 10000 }
-        )
-        return res.result
-    }
-}
-
-// Usage
-const data = await MyService.getData('abc')
-```
-
-Services are static classes — no instantiation. There is no `this.interface` in a service; `this` in a static method refers to the class itself, not a component instance.
-
-## Subscribing from a static service
-
-Because services have no component instance, there is no `this.interface` to dispatch or subscribe on. To subscribe to a WebSocket message and forward it to a consumer component, pass the consumer's interface name directly to `Muffin.WebInterface.subscribe()`:
-
-```js
-class WalletService extends Muffin.Service {
-    static name = 'WalletService'
-
-    static Interfaces = {
-        Main: '@host/app:::WalletService'
-    }
-
-    // Called once from the consumer component's onConnect()
-    static subscribeToBalance(consumerInterfaceName) {
-        Muffin.WebInterface.subscribe(
-            this.Interfaces.Main,
-            consumerInterfaceName,   // ← consumer's interface name as a string
-            { subject: 'balance-update' }
-        )
-    }
-}
-```
-
-The consumer component then listens on its own interface:
-
-```js
-async onConnect() {
-    WalletService.subscribeToBalance(this.interface.name)
-    this.interface.on('balance-update', (msg) => {
-        this.uiVars.balance = msg.balance
-    })
-}
-```
-
-`this.interface` is only available on **component instances**, never inside static service methods.
-
-## Built-in behaviour
-
-### TTL cache
-```js
-static getCached(key)           // → value or null
-static setCached(key, value, ttl?)   // default ttl = 60s
-static clearCache(key)
-```
-
-Repeated calls with the same key return cached result without hitting the socket.
-
-### Interface locking
-```js
-static async lockInterface(name, throttle?)    // default throttle = 500ms
-static unlockInterface(name)
-```
-
-Prevents duplicate simultaneous requests for the same operation. Second call waits for first to resolve.
-
-### Subscription locking
-```js
-static async lockSubscription(name, throttle?) // default throttle = 200ms
-static unlockSubscription(name)
-```
-
-Prevents duplicate listeners accumulating across component reconnects.
-
-## Full example
+The base class of an app's web services: static classes whose methods ask services through `Muffin.WebInterface`
+([WebRequestSdk](/api/web-request-sdk)). It gives each service a TTL cache, and named locks.
 
 ```js
 class AgentService extends Muffin.Service {
@@ -102,19 +14,75 @@ class AgentService extends Muffin.Service {
     static async getDetails(slug) {
         const cached = this.getCached(`details-${slug}`)
         if (cached) return cached
+        const res = await Muffin.WebInterface.request(
+            this.Interfaces.Dev,
+            { subject: 'getDetails', params: { slug } },
+            { MAX_RESPONSE_TIME: 10000 }
+        )
+        this.setCached(`details-${slug}`, res.result)
+        return res.result
+    }
+}
 
-        await this.lockInterface('getDetails')
+const details = await AgentService.getDetails('abc')
+```
+
+Services are static: never instantiated. In a static method `this` is the class, so there is no `this.interface`.
+
+## Built-in behaviour
+
+### TTL cache — each service its own
+```js
+static getCached(key)                // → value, or null when absent or expired
+static setCached(key, value, ttl?)   // ttl in ms, default 60000
+static clearCache(key?)              // one key, or all of this service's
+```
+
+Each service class has its own cache: two services may use the same key.
+
+### Locks
+```js
+static async lockInterface(name)     // waits until `name` is free, then holds it
+static unlockInterface(name)         // lets the next one waiting have it
+static async lockSubscription(name)
+static unlockSubscription(name)
+```
+
+One holder per name at a time; the others wait, and get it in the order they asked. Names are shared by every service.
+Always release in a `finally`.
+
+A lock is for not doing one thing twice at once — subscribing to the same thing from two places, or an operation that
+must not overlap itself. It is **not** needed for requests: any number can be in flight to one interface, and each gets
+its own reply.
+
+## Subscribing from a service
+
+A service has no component interface. Subscribe on a PostOffice socket, and let the component listen there:
+
+```js
+class WalletService extends Muffin.Service {
+    static name = 'WalletService'
+
+    static async watchBalance() {
+        await this.lockSubscription('balance')
         try {
-            const res = await Muffin.WebInterface.request(
-                this.Interfaces.Dev,
-                { subject: 'getDetails', params: { slug } },
-                { MAX_RESPONSE_TIME: 10000 }
-            )
-            this.setCached(`details-${slug}`, res.result)
-            return res.result
+            await Muffin.WebInterface.websubscribe('@host/wallet|||BalanceChanged', 'global', 'balance-changed')
         } finally {
-            this.unlockInterface('getDetails')
+            this.unlockSubscription('balance')
         }
     }
 }
 ```
+
+```js
+// once, where the app starts (a socket's listeners stay as long as the page)
+async onConnect() {
+    if (this.constructor._listening) return
+    this.constructor._listening = true
+    await WalletService.watchBalance()
+    Muffin.PostOffice.sockets.global.on('balance-changed', (msg) => { this.uiVars.balance = msg.result.balance })
+}
+```
+
+Each event is delivered once per socket and label, however many times `websubscribe` is called;
+`Muffin.WebInterface.webunsubscribe(address)` ends it.

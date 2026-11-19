@@ -6,8 +6,8 @@ Muffin is a client-side Web Components framework built by Footloose Labs. It has
 
 Both ship as a single CDN bundle. After loading, everything is available under `window.Muffin`.
 
-Current stable version: atom-websdk 3.3.0 / element 0.11.0
-CDN: https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.3.0/dist/sdk.min.js
+Current stable version: atom-websdk 3.4.2 / element 0.11.0
+CDN: https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.4.2/dist/sdk.min.js
 
 ---
 
@@ -25,7 +25,7 @@ Both ship as a single CDN bundle (`sdk.min.js`) or as separate ES modules.
 ## CDN
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.3.0/dist/sdk.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.4.2/dist/sdk.min.js"></script>
 ```
 
 After loading, `window.Muffin` is available with everything:
@@ -406,18 +406,18 @@ class AgentService extends Muffin.Service {
 }
 ```
 
-`Service` base provides TTL caching, interface locking (no duplicate in-flight requests), and subscription locking (no duplicate listeners).
+Requests can be made at once, to one interface or several: each gets its own reply (it carries a `ref` the gateway sends back). A failure rejects with the reply (`error`) or `{ message }` (no reply in time, connection closed). End a subscription with `webunsubscribe(address)`.
 
-**Important:** Services are static-only. `this.interface` does not exist in static methods. To subscribe and forward to a consumer component, pass the consumer's interface name as a string:
+`Service` gives each service class its own TTL cache, and named locks (one holder at a time, the rest wait in order) for what must not run twice at once. Requests need no lock.
 
+**Important:** Services are static-only — `this.interface` does not exist in service methods. To get a subscription's events to a component, subscribe on a PostOffice socket and listen there:
 ```js
-static subscribeToUpdates(consumerInterfaceName) {
-    Muffin.WebInterface.subscribe(this.Interfaces.Main, consumerInterfaceName, { subject: 'update' })
+static async watchUpdates() {
+    await Muffin.WebInterface.websubscribe('@host/app|||Updates', 'global', 'update')
 }
-
-// in component onConnect():
-MyService.subscribeToUpdates(this.interface.name)
-this.interface.on('update', (msg) => { this.uiVars.data = msg })
+// in the component, once:
+await MyService.watchUpdates()
+Muffin.PostOffice.sockets.global.on('update', (msg) => { this.uiVars.data = msg.result })
 ```
 
 ---
@@ -577,11 +577,12 @@ static getCached(key)               // → value or null
 static setCached(key, value, ttl?)  // default ttl = 60s
 static clearCache(key)
 
-static async lockInterface(name, throttle?)     // prevent duplicate in-flight requests
-static unlockInterface(name)
+static async lockInterface(name)     // one holder at a time, the rest wait in order
+static unlockInterface(name)         // always in finally
 
-static async lockSubscription(name, throttle?)  // prevent duplicate listeners
+static async lockSubscription(name)
 static unlockSubscription(name)
+// each service class has its own cache. Requests need no lock
 ```
 
 ---
@@ -615,12 +616,13 @@ await sdk.connect()
 
 | Method | Description |
 |---|---|
-| `connect()` | Open WebSocket. Auto-reconnects. |
-| `request(interface, message, opts?)` | Request → Response |
-| `websubscribe(interface, socket, label, opts?)` | Persistent subscription |
-| `communicate(message)` | Fire-and-forget |
+| `connect()` | Open the WebSocket; calls made while opening share one attempt. Does not reconnect by itself: on `close`, everything waiting is rejected and the app calls `connect()` again. Ping every `keepAliveTimeout` (60s). |
+| `webrequest(address, message, opts?)` / `request(…)` | A request; resolves with its own reply. `opts.MAX_RESPONSE_TIME` (ms, default 5000) is also the gateway's `ttl` |
+| `websubscribe(address, socket?, label?, opts?)` | Subscribe; each event delivered once per socket and label |
+| `webunsubscribe(address, opts?)` | End a subscription |
+| `communicate(lexemeLabel, frame)` | Send a lexicon frame, no reply expected |
 
-`Muffin.WebInterface` is the shared singleton initialized at app boot.
+`Muffin.WebInterface` is the app's one instance, made at start-up. Node (MCP servers, CLIs): `@muffin/atom-websdk/core` exports `RequestChannel`, the same request protocol.
 
 ---
 
@@ -1003,7 +1005,7 @@ Real-world issues from projects using Muffin. Includes resolved items for refere
 | # | Area | Issue | Workaround | Status |
 |---|------|--------|------------|--------|
 | 1 | Event binding | `on-keydown`, `on-focus`, `on-blur`, `on-dblclick` were missing from supported `on-*` attribute list. | Bind imperatively via `addEventListener`. | Resolved in atom-websdk 3.1.5 |
-| 2 | Service static `this.interface` | `this.interface` is `undefined` in static service methods. | Pass consumer interface name as string to `Muffin.WebInterface.subscribe()`. See Service docs. | Not a bug — expected JS behaviour. Documented. |
+| 2 | Service static `this.interface` | `this.interface` is `undefined` in static service methods. | Subscribe on a PostOffice socket (`websubscribe(address, 'global', label)`) and listen there. See Service docs. | Not a bug — expected JS behaviour. Documented. |
 | 3 | Child component attribute reactivity | Changing an attribute on a child Muffin component from the parent does not trigger child re-render. No `observedAttributes` equivalent. | Render dynamic output inline in the parent template. See DOMComponent docs. | Architectural limitation — documented. |
 | 4 | Store subscriptions not firing | `this.stores` declared in constructor did not register reactive subscriptions. `_subscribeToStores()` ran before subclass constructor assigned `this.stores`. | `store.subscribe(() => this.render())` in `onConnect()`. | Resolved in element 0.9.3 / atom-websdk 3.1.6 |
 | 5 | `composedScope` after `switchState` | Children in new state markup not yet in `composedScope` synchronously after `switchState`. | Use `await this.awaitChildLoad('key')` — deterministic, event-driven. | Architectural behaviour — documented. |
@@ -1013,3 +1015,6 @@ Real-world issues from projects using Muffin. Includes resolved items for refere
 | 10 | Focused element grafted after view switch | Clicking a button that switches views (e.g. "← Back") left that focused button inside the new view, replacing unrelated content such as another button's label. The reconciler protected any focused element from replacement, not just text fields. | None needed after upgrading. | Resolved in element 0.9.4 / atom-websdk 3.1.8 |
 | 11 | Imperatively-set attributes removed on re-render | In 3.1.8, attributes set via `toggleRootAttr` (or by hand) were stripped on the next re-render, e.g. a modal setting `is-open` closed immediately after opening. | Upgrade to 3.1.9. | Resolved in element 0.9.5 / atom-websdk 3.1.9 |
 | 12 | Router lost or repeated the address's query | At load the router pushed a rebuilt address: in path style the first query param was dropped (`/?x=1` became `/home`), params were repeated (`&k=1&k=1`), `basePath` was ignored, and values weren't encoded. | Upgrade to 3.2.0; build links with `href()`. | Resolved in element 0.10.0 / atom-websdk 3.2.0 |
+| 13 | Replies crossed between requests to one interface | Replies were matched by interface alone; a reply with `result: null` never resolved; a closed connection left requests waiting. | One request in flight per interface. | Resolved in atom-websdk 3.4.0 (with the gateway sending `ref` back) |
+| 14 | Services shared one cache | Same key in two services collided. | Prefix keys. | Resolved in atom-websdk 3.4.0 |
+| 15 | Two sockets when reconnecting | `connect()` called again while connecting opened a second socket. | Await one shared `connect()`. | Resolved in atom-websdk 3.4.2 |

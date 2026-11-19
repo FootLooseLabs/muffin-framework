@@ -1,55 +1,62 @@
 # WebSocket SDK
 
-`atom-websdk` extends element with `WebRequestSdk` — a structured layer over WebSocket for request/response and subscription patterns against remote microservices.
+`atom-websdk` adds to element the client for the web interface: `WebRequestSdk` — requests to services and
+subscriptions to their events, over one WebSocket to the gateway — and `Service`, the base class of an app's web
+services. Reference: [WebRequestSdk](/api/web-request-sdk), [Service](/api/service).
 
-## Interface address syntax
+## Interface addresses
 
-Two interface types, distinguished by separator:
-
-| Type | Address | Pattern |
+| Kind | Address | |
 |---|---|---|
-| Receptive | `host:::ServiceName` | Request → Response (client asks, server answers) |
-| Expressive | `host\|\|\|EventName` | Subscription (server pushes, client listens) |
+| Receptive | `host:::ServiceName` | a request, answered by one reply |
+| Expressive | `host\|\|\|EventName` | a subscription: the service's events |
 
 ## Setup
 
-`applyAtomWebSDK(Muffin)` bootstraps everything. Call it once at app startup, before composing components:
+Loaded from the CDN, the SDK attaches itself to `window.Muffin`. With ESM, call `applyAtomWebSDK` once at start-up:
 
 ```js
 import { applyAtomWebSDK } from '@muffin/atom-websdk'
 applyAtomWebSDK(window.Muffin)
 ```
 
-When loaded via CDN, this runs automatically if `window.Muffin` exists.
-
-## Making requests
+Then make the app's connection, once:
 
 ```js
-const result = await Muffin.WebInterface.request(
+Muffin.WebInterface = new Muffin.WebRequestSdk({ name: 'app', client_id, token, config })
+await Muffin.WebInterface.connect()
+```
+
+## Requests
+
+```js
+const reply = await Muffin.WebInterface.request(
     '@host/app:::AgentService',
     { subject: 'getDetails', params: { id: 'abc123' } },
     { MAX_RESPONSE_TIME: 10000 }
 )
+reply.result
 ```
+
+Requests can be made at once, to the same interface or others: each gets its own reply. A failure rejects with the
+reply (its `error`), or with `{ message }` when no reply came in time or the connection closed.
 
 ## Subscriptions
 
 ```js
-await sdk.websubscribe(
-    '@host/app|||broadcast-event',  // expressive interface
-    'global',                        // local PostOffice socket to route into
-    'broadcast-label',               // message label in that socket
-    { MAX_RESPONSE_TIME: 5000 }
-)
+await Muffin.WebInterface.websubscribe('@host/app|||broadcast-event', 'global', 'broadcast-label')
 
 Muffin.PostOffice.sockets.global.on('broadcast-label', (msg) => {
-    this.uiVars.items = msg.items
+    this.uiVars.items = msg.result.items
 })
+
+// when no longer wanted
+await Muffin.WebInterface.webunsubscribe('@host/app|||broadcast-event')
 ```
 
 ## Service class
 
-Wrap SDK calls in a static `Service` subclass. This is the standard pattern across projects:
+The standard pattern: a static `Service` subclass per service.
 
 ```js
 class AgentService extends Muffin.Service {
@@ -67,30 +74,20 @@ class AgentService extends Muffin.Service {
         )
         return res.result
     }
-
-    static async subscribe(handler) {
-        await Muffin.sdk.websubscribe(
-            '@vritti/ideator|||AgentBroadcast',
-            'global',
-            'agent-broadcast',
-            { MAX_RESPONSE_TIME: 5000 }
-        )
-        Muffin.PostOffice.sockets.global.on('agent-broadcast', handler)
-    }
 }
 ```
-
-Usage in a component:
 
 ```js
 async onConnect() {
-    const details = await AgentService.getDetails(this.uiVars.agentId)
-    this.uiVars.agent = details
-
-    AgentService.subscribe((msg) => {
-        this.uiVars.status = msg.status
-    })
+    this.uiVars.agent = await AgentService.getDetails(this.uiVars.agentId)
 }
 ```
 
-`Service` base class provides TTL caching, interface locking (no duplicate in-flight requests), and subscription locking (no duplicate listeners).
+`Service` gives each service its own TTL cache, and named locks for what must not run twice at once — see
+[Service](/api/service). Requests need no lock.
+
+## Connection
+
+The SDK does not reconnect by itself. On `close` (`Muffin.WebInterface.eventInterface`), everything waiting is
+rejected, and so is a request made while it is closed. The app calls `connect()` again (calls made while it is
+opening share one attempt) and asks once it resolves.

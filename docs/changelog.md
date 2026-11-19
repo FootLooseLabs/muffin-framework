@@ -4,6 +4,54 @@ Release history for `@muffin/atom-websdk`. Each release bundles the correspondin
 
 ---
 
+## 3.4.2 — element 0.11.0
+**CDN:** `https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.4.2/dist/sdk.min.js`
+
+- **One socket at a time.** `connect()` called again while connecting (two parts of an app reconnecting at once) used
+  to open a second socket: sends failed until the newer one opened, and the older stayed open, delivering events
+  twice. Calls made while connecting now share that one attempt; a replaced socket no longer affects the connection.
+  Calling `connect()` on an open connection still opens a fresh one.
+
+**Upgrading:** nothing to change.
+
+---
+
+## 3.4.1 — element 0.11.0
+Installable from git (`npm i github:FootLooseLabs/atom-websdk#v3.4.1`): the workspace link to `@muffin/element` moved to
+the muffin-framework workspace root. Code identical to 3.4.0.
+
+---
+
+## 3.4.0 — element 0.11.0
+**CDN:** `https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.4.0/dist/sdk.min.js`
+
+### Requests and replies ([WebRequestSdk](/api/web-request-sdk#requests-and-replies))
+- **Each request gets its own reply.** Replies were matched by interface alone: two requests in flight to one
+  interface could each get the other's reply, and a reply after a timeout went to the next request. Every request now
+  carries a `ref`; the gateway (rtc:webrequest-handler, deployed alongside) sends it back on the reply. Any number of
+  requests can be in flight to one interface, in any order. With a gateway that sends no `ref`, one request per
+  interface at a time — learnt from the connection's first reply — so replies are never crossed either way.
+- **A request settles once, and always.** A reply with `result: null` resolves (it never did); a closed connection
+  rejects everything waiting at once (it waited out each timeout); a request leaves no listeners or timers behind
+  (each left two listeners, never removed). Failures reject with the reply (`error`) or with `{ message }`.
+- **`webunsubscribe(address)`** ends a subscription (apps sent the frame by hand).
+- **`websubscribe`** delivers each event once per socket and label, however often it is called.
+- **`request(address, message, options)`** is `webrequest`; the lexeme form `request(label, frame, opLabel?)` still
+  works and is deprecated.
+
+### Service ([Service](/api/service))
+- **Each service class its own cache** — it was one cache for all, so keys collided.
+- **Locks hand on in order** instead of polling every 500 ms; the throttle argument is no longer used.
+
+### For Node: `@muffin/atom-websdk/core`
+`RequestChannel`, the request protocol the browser SDK is built on, for MCP servers and CLIs: ESM, CommonJS and
+types, no DOM. jity-mcp, wity-mcp and wity-cli use it.
+
+**Upgrading:** nothing to change. Afterwards, drop any queue that sends one request per interface at a time, and any
+unsubscribe that sends its own frame (use `webunsubscribe`).
+
+---
+
 ## 3.3.0 — element 0.11.0
 **CDN:** `https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.3.0/dist/sdk.min.js`
 

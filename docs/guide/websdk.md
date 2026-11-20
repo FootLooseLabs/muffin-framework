@@ -88,6 +88,13 @@ async onConnect() {
 
 ## Connection
 
-The SDK does not reconnect by itself. On `close` (`Muffin.WebInterface.eventInterface`), everything waiting is
-rejected, and so is a request made while it is closed. The app calls `connect()` again (calls made while it is
-opening share one attempt) and asks once it resolves.
+On a close everything waiting is rejected, and so is a request made while it is closed. By default the app calls
+`connect()` again (calls made while it is opening share one attempt). Pass `reconnect: true` and the SDK keeps it open
+itself — opened again after a growing wait, at once when the page is shown or the device is back online, its
+subscriptions made again, then `resumed`; `state` says where it is. See
+[WebRequestSdk — The connection](/api/web-request-sdk#the-connection).
+
+```js
+Muffin.WebInterface = new Muffin.WebRequestSdk({ name: 'app', client_id, token, config, reconnect: true })
+await Muffin.WebInterface.connect()
+```

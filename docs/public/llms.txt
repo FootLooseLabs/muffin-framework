@@ -7,13 +7,13 @@ Muffin is a client-side Web Components framework built by Footloose Labs. It has
 Both ship as a single CDN bundle (`sdk.min.js`). After loading, everything is available under `window.Muffin`.
 
 Current stable version: atom-websdk 3.4.2 / element 0.11.0
-CDN: https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.4.2/dist/sdk.min.js
+CDN: https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.5.0/dist/sdk.min.js
 
 ## Stack-specific context files
 
 For AI agents working inside a project, use the stack-specific file instead of llms-full.txt:
 - `llms-vanilla.txt` — vanilla Muffin projects (plain JS, Muffin.Service, src/web-services/)
-- `llms-ts.txt` — React + Muffin projects (TypeScript, ElementWebService, WebInterfaceProvider, src/muffin-services/)
+- `llms-ts.txt` — React + Muffin projects (TypeScript, services on `@muffin/atom-websdk/service`, src/muffin-services/)
 
 ---
 

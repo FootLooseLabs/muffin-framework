@@ -148,7 +148,7 @@ your-services-registry/
       file-uploader.js
       registry.json     ← manifest for vanilla services
     sdk/
-      WebInterfaceProvider.ts   ← infra, not a service
+      connection.ts             ← infra, not a service
 ```
 
 ### `registry.json` (services-ts)

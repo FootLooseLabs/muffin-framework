@@ -7,7 +7,7 @@ Muffin is a client-side Web Components framework built by Footloose Labs. It has
 Both ship as a single CDN bundle. After loading, everything is available under `window.Muffin`.
 
 Current stable version: atom-websdk 3.4.2 / element 0.11.0
-CDN: https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.4.2/dist/sdk.min.js
+CDN: https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.5.0/dist/sdk.min.js
 
 ---
 
@@ -25,7 +25,7 @@ Both ship as a single CDN bundle (`sdk.min.js`) or as separate ES modules.
 ## CDN
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.4.2/dist/sdk.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.5.0/dist/sdk.min.js"></script>
 ```
 
 After loading, `window.Muffin` is available with everything:
@@ -674,13 +674,12 @@ React component → hook → Service class (extends Muffin.Service) → Muffin.W
 
 Load Muffin before React mounts, initialize `Muffin.WebInterface`, then use service classes from React hooks exactly as in muffin-only projects. No `DOMComponent` subclasses needed in the React layer.
 
-Services extend `ElementWebService` (the TypeScript-compatible base class from `atom-websdk`) rather than `Muffin.Service`, and use a `WebInterfaceProvider` singleton to access the authenticated `WebInterface` instance.
+Services extend `Service` from `@muffin/atom-websdk/service` (installed from git) — the same class as `Muffin.Service`, importable as the module loads, before the SDK is there. Never copy a base class in (`ElementWebService` was 2.x's polyfill). Requests need no lock.
 
 ```ts
-import { ElementWebService } from '../muffin-sdk'
-import { WebInterfaceProvider } from './WebInterfaceProvider'
+import { Service } from '@muffin/atom-websdk/service'
 
-export default class AccountManagementService extends ElementWebService {
+export default class AccountManagementService extends Service {
     static name = 'account-management-service'
 
     static Interfaces = {
@@ -688,18 +687,12 @@ export default class AccountManagementService extends ElementWebService {
     }
 
     static async getSessionProps(): Promise<unknown> {
-        const interfaceName = 'SessionServiceInterface'
-        await this.lockInterface(interfaceName)
-        try {
-            const response = await WebInterfaceProvider.request(
-                this.Interfaces[interfaceName],
-                { subject: 'getSessionProps', object: {} },
-                { MAX_RESPONSE_TIME: 5000 }
-            )
-            return (response as { result: unknown }).result
-        } finally {
-            this.unlockInterface(interfaceName)
-        }
+        const response = await Muffin.WebInterface.request(
+            this.Interfaces.SessionServiceInterface,
+            { subject: 'getSessionProps', object: {} },
+            { MAX_RESPONSE_TIME: 5000 }
+        )
+        return response.result
     }
 }
 ```
@@ -717,7 +710,7 @@ your-org-services/   (private repo)
   packages/
     services-ts/       ← services for React + Muffin projects (TypeScript)
     services-vanilla/  ← services for vanilla Muffin projects (plain JS)
-    sdk/               ← WebInterfaceProvider and other infra (not services)
+    sdk/               ← the app's connection and other infra (not services)
 ```
 
 Each package is a plain directory of service files with a `registry.json` manifest — no build step required.
@@ -934,7 +927,7 @@ your-services-registry/
       account-management.js
       registry.json
     sdk/
-      WebInterfaceProvider.ts
+      connection.ts       ← the app's connection (config, sign-in, reconnect)
 ```
 
 `registry.json` (services-ts):

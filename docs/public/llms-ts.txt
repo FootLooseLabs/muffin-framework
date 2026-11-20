@@ -24,41 +24,36 @@ tsconfig.json
 .mufrc.json             ← private registry config
 ```
 
-## Boot sequence (main.tsx)
+## Boot sequence
 
-Muffin must be loaded and connected before React mounts:
-
-```ts
-import { loadAtomWebSDK } from './muffin-sdk'
-
-await loadAtomWebSDK()
-
-import { createRoot } from 'react-dom/client'
-import App from './App'
-createRoot(document.getElementById('root')!).render(<App />)
-```
+The SDK loads from the CDN and its connection is made once, kept open by the SDK (`reconnect: true`: reopened after a
+drop, its subscriptions made again, `resumed` dispatched). React can mount at once — services do not need the SDK to
+be defined, only to make requests:
 
 ```ts
 // src/muffin-sdk/index.ts
-export async function loadAtomWebSDK() {
-    if (window.Muffin) return
-    await loadScript('https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.4.2/dist/sdk.min.js')
-    Muffin.WebInterface = new Muffin.WebRequestSdk({ label: 'sandbox' })
-    await Muffin.WebInterface.connect()
+let loading: Promise<void> | null = null
+export function loadAtomWebSDK() {
+    return (loading ??= (async () => {
+        await loadScript('https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.5.0/dist/sdk.min.js')
+        Muffin.WebInterface = new Muffin.WebRequestSdk({ name: 'app', client_id, token: () => signIn(), config, reconnect: true })
+        await Muffin.WebInterface.connect()
+    })())
 }
-
-export function getMuffin() { return window.Muffin }
 ```
 
 ## Service pattern
 
-Services extend `ElementWebService` (not `Muffin.Service`). Use `WebInterfaceProvider.request()` instead of `Muffin.WebInterface.request()` directly.
+Services extend `Service` from `@muffin/atom-websdk/service` (installed from git: `npm i
+github:FootLooseLabs/atom-websdk#v3.5.0`) — the same class as `Muffin.Service`, importable as the module loads. Never
+copy a base class into the project (`ElementWebService` was atom-websdk 2's polyfill; 3 has it built in). A request
+needs no lock: each gets its own reply, any number in flight.
 
 ```ts
-import { ElementWebService } from '../muffin-sdk'
-import { WebInterfaceProvider } from './WebInterfaceProvider'
+import { Service } from '@muffin/atom-websdk/service'
+import { loadAtomWebSDK } from '../muffin-sdk'
 
-export default class EntityManagerService extends ElementWebService {
+export default class EntityManagerService extends Service {
     static name = 'entity-manager-service'
 
     static Interfaces = {
@@ -69,36 +64,19 @@ export default class EntityManagerService extends ElementWebService {
         const cacheKey = `entity-${entityId}`
         const cached = this.getCached(cacheKey)
         if (cached) return cached
-
-        const interfaceName = 'EntityManager'
-        await this.lockInterface(interfaceName)
+        await loadAtomWebSDK()
         try {
-            const response = await WebInterfaceProvider.request(
-                this.Interfaces[interfaceName],
+            const response = await Muffin.WebInterface.request(
+                this.Interfaces.EntityManager,
                 { subject: 'getEntity', object: { entityId } },
                 { MAX_RESPONSE_TIME: 10000 }
             )
-            const result = (response as { result: unknown }).result
-            this.setCached(cacheKey, result, 60 * 1000)
-            return result
+            this.setCached(cacheKey, response.result, 60 * 1000)
+            return response.result
         } catch (error: unknown) {
             throw new Error((error as { error?: string })?.error || 'Failed to get entity')
-        } finally {
-            this.unlockInterface(interfaceName)
         }
     }
-}
-```
-
-## WebInterfaceProvider
-
-Singleton that wraps `Muffin.WebInterface`. Services call this instead of accessing `WebInterface` directly.
-
-```ts
-// src/muffin-services/WebInterfaceProvider.ts (or sdk/)
-export const WebInterfaceProvider = {
-    request: (interfaceAddress: string, message: object, opts?: object) =>
-        window.Muffin.WebInterface.request(interfaceAddress, message, opts)
 }
 ```
 
@@ -118,14 +96,16 @@ Project-specific services live in `src/web-services/` or `src/muffin-services/`.
 static getCached(key: string)                          // → value or null
 static setCached(key: string, value: unknown, ttl?: number)  // default 60s
 static clearCache(key?: string)                        // clears one or all
+// each service class has its own cache
 
 static async lockInterface(name: string)      // one holder at a time, the rest wait in order
 static unlockInterface(name: string)
-
 static async lockSubscription(name: string)
 static unlockSubscription(name: string)
-// each service class has its own cache
 ```
+
+A lock is for what must not run twice at once — subscribing to one thing from two places, an operation that must not
+overlap itself. Never around a request: requests to one interface run side by side, each answered with its own reply.
 
 ## React hook pattern
 
@@ -164,28 +144,33 @@ export function EntityView({ entityId }: { entityId: string }) {
 ## WebInterface request syntax
 
 ```ts
-const response = await WebInterfaceProvider.request(
+const response = await Muffin.WebInterface.request(
     '@host/app:::ServiceName',          // receptive (request → response)
     { subject: 'methodName', object: { ...payload } },
     { MAX_RESPONSE_TIME: 10000 }
 )
-return (response as { result: unknown }).result
+return response.result
+```
+
+## Subscriptions
+
+```ts
+await Muffin.WebInterface.websubscribe('@host/app|||Changes', 'global', 'changes')
+Muffin.PostOffice.sockets.global.on('changes', (m) => apply(m.result))
+// one route ended; the gateway is told when it was the last
+await Muffin.WebInterface.webunsubscribe('@host/app|||Changes', { socketName: 'global', label: 'changes' })
 ```
 
 ## TypeScript declarations
 
+The SDK ships its types (`@muffin/atom-websdk`):
+
 ```ts
 // src/muffin-sdk/muffin.d.ts
+import type { WebRequestSdk, Service } from '@muffin/atom-websdk'
 declare global {
-    interface Window {
-        Muffin: {
-            WebRequestSdk: any
-            WebInterface: any
-            Service: any
-            DOMComponent: any
-            PostOffice: any
-        }
-    }
+    // eslint-disable-next-line no-var
+    var Muffin: { WebRequestSdk: typeof WebRequestSdk; Service: typeof Service; WebInterface: WebRequestSdk; PostOffice: any; DOMComponent: any }
 }
 export {}
 ```
@@ -254,22 +239,20 @@ Run `muf services add` again to update to the latest version.
 
 ## Key patterns and gotchas
 
-**Requests need no lock** — any number can be in flight to one interface, and each gets its own reply. Use `lockInterface` / `unlockInterface` only for an operation that must not overlap itself:
+**Requests need no lock** — any number can be in flight to one interface, and each gets its own reply. A lock is only for what must not run twice at once — subscribing to one thing from two places:
 ```ts
-await this.lockInterface(interfaceName)
+await this.lockSubscription(address)
 try {
-    // request
+    await Muffin.WebInterface.websubscribe(address, 'global', label)
 } finally {
-    this.unlockInterface(interfaceName)  // always in finally
+    this.unlockSubscription(address)  // always in finally
 }
 ```
 
-**Cache before locking** — check cache first, lock only if cache miss:
+**Cache first** — return what is cached before asking:
 ```ts
 const cached = this.getCached(cacheKey)
 if (cached) return cached
-await this.lockInterface(interfaceName)
-// ...
 ```
 
 **Error shape from WebSocket services** — errors come back as `{ error: string }`, not JS Error objects:
@@ -287,4 +270,4 @@ static async subscribeToUpdates(onUpdate: (msg: unknown) => void) {
 }
 ```
 
-**`WebInterfaceProvider` is not a service** — it does not extend `ElementWebService`. It is infrastructure that lives in `sdk/` or alongside the services, not in `muffin-services/`.
+**The app's connection is not a service** — where it is made (its config, sign-in, `reconnect`) is infrastructure in `muffin-sdk/`, not in `muffin-services/`.

@@ -24,8 +24,9 @@ import { loadAtomWebSDK } from './muffin-sdk'
 
 await loadAtomWebSDK()   // sets window.Muffin, connects WebInterface
 
-import { createRoot } from 'react-dom/client'
-import App from './App'
+// imported only now: its services extend Muffin.Service as their modules run. A static `import App` would run first
+// (imports are hoisted), before the SDK is there.
+const [{ createRoot }, { default: App }] = await Promise.all([import('react-dom/client'), import('./App')])
 createRoot(document.getElementById('root')!).render(<App />)
 ```
 
@@ -35,8 +36,9 @@ createRoot(document.getElementById('root')!).render(<App />)
 export async function loadAtomWebSDK() {
     // Load sdk.min.js from CDN if not already loaded
     if (window.Muffin) return
-    await loadScript('https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.4.2/dist/sdk.min.js')
-    Muffin.WebInterface = new Muffin.WebRequestSdk({ label: 'sandbox' })
+    await loadScript('https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.5.0/dist/sdk.min.js')
+    // kept open: reopened after a drop, its subscriptions made again (see WebRequestSdk — The connection)
+    Muffin.WebInterface = new Muffin.WebRequestSdk({ label: 'sandbox', reconnect: true })
     await Muffin.WebInterface.connect()
 }
 
@@ -110,18 +112,21 @@ export function AssetGrid({ folderId }: { folderId: string }) {
 
 ## TypeScript declarations
 
-Declare `window.Muffin` types to avoid TS errors:
+The SDK ships its types (`@muffin/atom-websdk`, `src/main.d.ts`). Installed from git for its types only
+(`npm i -D github:FootLooseLabs/atom-websdk#v3.5.0`), the app declares `window.Muffin` with them:
 
 ```ts
 // src/muffin-sdk/muffin.d.ts
+import type { WebRequestSdk, Service } from '@muffin/atom-websdk'
+
 declare global {
     interface Window {
         Muffin: {
-            DOMComponent: typeof DOMComponent
-            PostOffice: typeof PostOffice
             WebRequestSdk: typeof WebRequestSdk
             Service: typeof Service
-            WebInterface: InstanceType<typeof WebRequestSdk>
+            WebInterface: WebRequestSdk
+            PostOffice: any
+            DOMComponent: any
         }
     }
 }

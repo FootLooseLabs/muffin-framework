@@ -4,6 +4,43 @@ Release history for `@muffin/atom-websdk`. Each release bundles the correspondin
 
 ---
 
+## 3.5.0 — element 0.11.0
+**CDN:** `https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.5.0/dist/sdk.min.js`
+
+### The connection ([WebRequestSdk](/api/web-request-sdk#the-connection))
+- **Kept open, when asked** (`reconnect: true`, or `{ backoff: [ms…] }`): once `connect()` is called, a connection
+  that closes is opened again — at once when the page is shown again or the device is back online, else after a
+  growing wait (1s … 30s) — until `disconnect()`. Offline, it waits for the device to be online, and a socket the
+  network took away is closed at once. Each time it is open again its subscriptions are made again at the gateway,
+  then `resumed` is dispatched, for whatever waited on events to read what it missed. Without the option nothing
+  changes: a close leaves it closed.
+- **Its state, public:** `state` (`idle`, `connecting`, `connected`, `reconnecting`, `offline`), dispatched as `state`
+  on each change, and `connected`. Nothing outside the SDK needs `_socketState` or `_connection`.
+- **`token` may be a function:** asked each time it connects, a reconnect too — for sign-ins that live minutes.
+- **A connect whose socket closes before it opens rejects.** It used to wait forever when no error came first.
+
+### Subscriptions
+- **One route unsubscribed:** `webunsubscribe(address, { socketName, label })` ends that route only; the gateway is told
+  when it was the last. Two parts of an app on one subscription no longer end each other's. Without them, as before:
+  every route.
+
+### Another SDK on the page
+- **A connection keeps its own Muffin.** It looked up `window.Muffin` each time it opened a socket or routed an event,
+  so another SDK loaded later on the page (a widget's, 2.x) took its sockets and events over. It now keeps the Muffin
+  it was made in.
+
+### Services and types
+- **`@muffin/atom-websdk/service`:** `Service` as a module, runtime-neutral — for an app whose services are defined as
+  its modules load, before the browser SDK is there (the same code as `Muffin.Service`). Installed from git
+  (`npm i github:FootLooseLabs/atom-websdk#v3.5.0`). Replaces the `ElementWebService` an app copied in.
+- `@muffin/atom-websdk` ships its browser types (`src/main.d.ts`): `WebRequestSdk`, `Service`, their options and
+  events — apps no longer declare them by hand.
+
+**Upgrading:** nothing to change. An app that reopened its connection and made its subscriptions again itself can
+pass `reconnect` and drop that code.
+
+---
+
 ## 3.4.2 — element 0.11.0
 **CDN:** `https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.4.2/dist/sdk.min.js`
 

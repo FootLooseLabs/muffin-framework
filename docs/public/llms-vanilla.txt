@@ -3,7 +3,7 @@
 Working knowledge for a vanilla Muffin project (plain JS, no React). For full framework reference see llms-full.txt.
 
 Framework: element + atom-websdk, loaded via CDN as `window.Muffin`.
-CDN: https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.4.2/dist/sdk.min.js
+CDN: https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.5.0/dist/sdk.min.js
 
 ---
 
@@ -101,7 +101,6 @@ export default class AgentService extends Muffin.Service {
         const cached = this.getCached(cacheKey)
         if (cached) return cached
 
-        await this.lockInterface('Dev')
         try {
             const res = await Muffin.WebInterface.request(
                 this.Interfaces.Dev,
@@ -113,8 +112,6 @@ export default class AgentService extends Muffin.Service {
             return result
         } catch (e) {
             throw new Error(e?.error || 'Failed to get agent details')
-        } finally {
-            this.unlockInterface('Dev')
         }
     }
 }

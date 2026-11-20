@@ -11,14 +11,14 @@ your-org-services/   (private repo)
   packages/
     services-ts/      ← services for React + Muffin projects
     services-vanilla/ ← services for vanilla Muffin projects
-    sdk/              ← WebInterfaceProvider and other infra (not services)
+    sdk/              ← the app's connection and other infra (not services)
 ```
 
 Each package is a plain directory of service files with a `registry.json` manifest — no build step required.
 
 ### `services-ts/`
 
-For projects using the [React + Muffin](./react-muffin) stack. Services extend `ElementWebService` from `atom-websdk`.
+For projects using the [React + Muffin](./react-muffin) stack. Services extend `Service` from `@muffin/atom-websdk/service` (the same class as `Muffin.Service`, importable as their modules load).
 
 ```
 services-ts/

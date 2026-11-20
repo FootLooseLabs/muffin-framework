@@ -35,7 +35,7 @@ be defined, only to make requests:
 let loading: Promise<void> | null = null
 export function loadAtomWebSDK() {
     return (loading ??= (async () => {
-        await loadScript('https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.5.0/dist/sdk.min.js')
+        await loadScript('https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.5.1/dist/sdk.min.js')
         Muffin.WebInterface = new Muffin.WebRequestSdk({ name: 'app', client_id, token: () => signIn(), config, reconnect: true })
         await Muffin.WebInterface.connect()
     })())
@@ -45,7 +45,7 @@ export function loadAtomWebSDK() {
 ## Service pattern
 
 Services extend `Service` from `@muffin/atom-websdk/service` (installed from git: `npm i
-github:FootLooseLabs/atom-websdk#v3.5.0`) — the same class as `Muffin.Service`, importable as the module loads. Never
+github:FootLooseLabs/atom-websdk#v3.5.1`) — the same class as `Muffin.Service`, importable as the module loads. Never
 copy a base class into the project (`ElementWebService` was atom-websdk 2's polyfill; 3 has it built in). A request
 needs no lock: each gets its own reply, any number in flight.
 

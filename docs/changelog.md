@@ -4,6 +4,16 @@ Release history for `@muffin/atom-websdk`. Each release bundles the correspondin
 
 ---
 
+## 3.5.1 — element 0.11.0
+**CDN:** `https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.5.1/dist/sdk.min.js`
+
+- **`Service`'s cache cleaner never keeps a runtime alive.** Its 30-second timer kept Node running (a CLI or a test on
+  `@muffin/atom-websdk/service` never exited); it is now unref'd. Nothing changes in a browser.
+
+**Upgrading:** nothing to change.
+
+---
+
 ## 3.5.0 — element 0.11.0
 **CDN:** `https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.5.0/dist/sdk.min.js`
 

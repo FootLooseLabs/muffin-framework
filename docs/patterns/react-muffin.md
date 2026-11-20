@@ -36,7 +36,7 @@ createRoot(document.getElementById('root')!).render(<App />)
 export async function loadAtomWebSDK() {
     // Load sdk.min.js from CDN if not already loaded
     if (window.Muffin) return
-    await loadScript('https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.5.0/dist/sdk.min.js')
+    await loadScript('https://cdn.jsdelivr.net/gh/FootLooseLabs/atom-websdk@3.5.1/dist/sdk.min.js')
     // kept open: reopened after a drop, its subscriptions made again (see WebRequestSdk — The connection)
     Muffin.WebInterface = new Muffin.WebRequestSdk({ label: 'sandbox', reconnect: true })
     await Muffin.WebInterface.connect()
@@ -113,7 +113,7 @@ export function AssetGrid({ folderId }: { folderId: string }) {
 ## TypeScript declarations
 
 The SDK ships its types (`@muffin/atom-websdk`, `src/main.d.ts`). Installed from git for its types only
-(`npm i -D github:FootLooseLabs/atom-websdk#v3.5.0`), the app declares `window.Muffin` with them:
+(`npm i -D github:FootLooseLabs/atom-websdk#v3.5.1`), the app declares `window.Muffin` with them:
 
 ```ts
 // src/muffin-sdk/muffin.d.ts

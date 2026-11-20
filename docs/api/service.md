@@ -30,7 +30,7 @@ const details = await AgentService.getDetails('abc')
 Services are static: never instantiated. In a static method `this` is the class, so there is no `this.interface`.
 
 An app whose services are defined as its modules load (a bundled app, before the SDK script has run) extends the same
-class as a module — `@muffin/atom-websdk/service`, installed from git (`npm i github:FootLooseLabs/atom-websdk#v3.5.0`):
+class as a module — `@muffin/atom-websdk/service`, installed from git (`npm i github:FootLooseLabs/atom-websdk#v3.5.1`):
 
 ```ts
 import { Service } from '@muffin/atom-websdk/service'
